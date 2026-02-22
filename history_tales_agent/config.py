@@ -127,6 +127,9 @@ class AppConfig:
     openai_model: str = field(
         default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o")
     )
+    openai_fast_model: str = field(
+        default_factory=lambda: os.getenv("OPENAI_FAST_MODEL", "")
+    )
     openai_temperature: float = field(
         default_factory=lambda: float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     )
