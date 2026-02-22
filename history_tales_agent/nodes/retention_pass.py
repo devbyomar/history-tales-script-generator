@@ -31,6 +31,7 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
             "current_node": "RetentionPassNode",
         }
 
+    current_word_count = len(script.split())
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
     rehook_words = int(avg_rehook * (155 / 60))
 
@@ -40,6 +41,7 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
         target_words=target_words,
         min_words=min_words,
         max_words=max_words,
+        current_word_count=current_word_count,
         script=script,
     )
 
@@ -65,6 +67,20 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
         revised_script = revised.strip()
 
     word_count = len(revised_script.split())
+    input_word_count = len(script.split())
+
+    # Guard: if retention pass blew past max_words, fall back to original
+    if word_count > max_words and input_word_count <= max_words:
+        logger.warning(
+            "retention_pass_over_limit",
+            input_wc=input_word_count,
+            output_wc=word_count,
+            max_words=max_words,
+            msg="Retention pass exceeded max_words — using original script",
+        )
+        revised_script = script
+        word_count = input_word_count
+
     logger.info("retention_pass_complete", word_count=word_count)
 
     return {

@@ -385,9 +385,11 @@ Rules:
 
 CRITICAL WORD COUNT RULES:
 - The revised script MUST stay between {min_words} and {max_words} words.
-- Do NOT cut, compress, or summarise existing content.
-- If you remove weak material, REPLACE it with stronger material of equal or greater length.
-- When in doubt, ADD detail rather than remove it.
+- The CURRENT word count is approximately {current_word_count} words.
+- If the script is ALREADY within the target range, do NOT add substantial new material. Focus on REPLACING weak lines with stronger ones of EQUAL length.
+- If the script is BELOW {min_words}, add detail to reach at least {min_words} words.
+- If the script is ABOVE {max_words}, tighten and trim to stay under {max_words} words.
+- NEVER exceed {max_words} words. This is a hard ceiling.
 
 If the script needs changes, output the COMPLETE revised script.
 If the script passes all checks, output it unchanged.

@@ -69,31 +69,45 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
     recommendations = qc_result.get("recommendations", [])
 
     # Programmatic checks
+    hard_issues = []  # Block pass
+    soft_issues = []  # Warn but don't block
+
     word_in_range = min_words <= word_count <= max_words
     if not word_in_range:
-        issues.append(f"Word count {word_count} outside range [{min_words}, {max_words}]")
+        hard_issues.append(f"Word count {word_count} outside range [{min_words}, {max_words}]")
 
     if not diversity["meets_minimum"]:
-        issues.append(f"Only {diversity['unique_domains']} unique domains (need ≥3)")
+        soft_issues.append(f"Only {diversity['unique_domains']} unique domains (need ≥3)")
 
     if not institutional_present:
-        issues.append("No institutional source found")
+        soft_issues.append("No institutional source found")
 
-    if emotional_score < 70:
-        issues.append(f"Emotional intensity score {emotional_score} below 70 threshold")
+    if emotional_score < 60:
+        hard_issues.append(f"Emotional intensity score {emotional_score} below 60 threshold")
+    elif emotional_score < 70:
+        soft_issues.append(f"Emotional intensity score {emotional_score} below 70 (acceptable but could improve)")
 
-    if sensory_score < 70:
-        issues.append(f"Sensory density score {sensory_score} below 70 threshold")
+    if sensory_score < 60:
+        hard_issues.append(f"Sensory density score {sensory_score} below 60 threshold")
+    elif sensory_score < 70:
+        soft_issues.append(f"Sensory density score {sensory_score} below 70 (acceptable but could improve)")
 
-    # Check for disclaimer
-    if "historical synthesis based on cited sources" not in script.lower():
-        issues.append("Missing disclaimer text")
+    # Check for disclaimer — flexible matching
+    disclaimer_phrases = [
+        "historical synthesis based on cited sources",
+        "historical synthesis",
+        "based on cited sources",
+        "documentary script is a historical",
+    ]
+    has_disclaimer = any(phrase in script.lower() for phrase in disclaimer_phrases)
+    if not has_disclaimer:
+        soft_issues.append("Missing or non-standard disclaimer text")
 
-    overall_pass = len(issues) == 0 or (
-        word_in_range
-        and emotional_score >= 60
-        and sensory_score >= 60
-    )
+    # Combine LLM issues as soft (advisory)
+    all_issues = hard_issues + soft_issues + issues
+
+    # Pass if no hard issues exist
+    overall_pass = len(hard_issues) == 0
 
     report = QCReport(
         overall_pass=overall_pass,
@@ -106,7 +120,7 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
         source_count=len(sources),
         institutional_source_present=institutional_present,
         independent_domains=diversity["unique_domains"],
-        issues=issues,
+        issues=all_issues,
         recommendations=recommendations,
     )
 
@@ -114,7 +128,9 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
         "qc_complete",
         overall_pass=overall_pass,
         word_count=word_count,
-        issues=len(issues),
+        hard_issues=len(hard_issues),
+        soft_issues=len(soft_issues),
+        llm_issues=len(issues),
     )
 
     iteration_count = state.get("iteration_count", 0) + 1
