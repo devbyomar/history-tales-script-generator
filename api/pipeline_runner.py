@@ -117,6 +117,9 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
         completed_nodes: set[str] = set()
         final_state: dict[str, Any] = {}
 
+        # Capture the running event loop BEFORE entering the thread
+        loop = asyncio.get_running_loop()
+
         # Run the pipeline with streaming in a thread to avoid blocking the event loop
         def _run_sync():
             nonlocal final_state
@@ -144,8 +147,8 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
                         message=NODE_LABELS.get(node_name, node_name),
                         data=extra_data,
                     )
-                    # Schedule coroutine from sync context
-                    asyncio.get_event_loop().call_soon_threadsafe(
+                    # Schedule coroutine from sync context using the captured loop
+                    loop.call_soon_threadsafe(
                         lambda p=progress: asyncio.ensure_future(
                             run_store.publish_event(p)
                         )
@@ -155,7 +158,6 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             final_state = {**initial_state, **last_state}
 
         # Run in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _run_sync)
 
         # Update the run store with results
