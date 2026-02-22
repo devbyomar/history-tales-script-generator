@@ -4,6 +4,12 @@
 .memory/
 .env
 
+# Web frontend
+web/node_modules/
+web/.next/
+web/.env.local
+web/out/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

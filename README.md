@@ -239,6 +239,90 @@ history_tales_agent/
 - Add multi-language translation node
 - Add Patreon-tier extended cut generation (longer scripts with bonus sections)
 
+## Web UI
+
+A professional-grade web interface built with **Next.js 14** + **shadcn/ui** + **Tailwind CSS**, backed by a **FastAPI** server.
+
+### Running Locally
+
+```bash
+# Terminal 1: Start the API server
+uvicorn api.server:app --reload --port 8000
+
+# Terminal 2: Start the frontend
+cd web && npm install && npm run dev
+```
+
+Open http://localhost:3000 — the dashboard connects to the API at http://localhost:8000.
+
+### Features
+
+- **Generate Form**: Full parameter control (video length, era, geo, tone, sensitivity, format rotation)
+- **Live Pipeline Tracker**: Real-time 16-node progress with SSE streaming, tier badges (creative/fast), per-node data
+- **Script Viewer**: Tabbed view — Script, Sources, QC Report, Stats — with markdown rendering
+- **Export**: Download script as `.md` or sources as JSON
+- **Run History**: Browse and reload past generation runs
+- **Dark Theme**: Cinematic dark UI designed for content creators
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check + model info |
+| `POST` | `/generate` | Start a pipeline run (returns `run_id`) |
+| `GET` | `/runs/{id}/stream` | SSE stream of real-time node progress |
+| `GET` | `/runs` | List recent runs |
+| `GET` | `/runs/{id}` | Get full run details + script |
+| `GET` | `/runs/{id}/export/script` | Download script as markdown |
+| `GET` | `/runs/{id}/export/sources` | Download sources as JSON |
+
+Interactive API docs at http://localhost:8000/docs (Swagger UI).
+
+## Deployment
+
+### Free Tier Hosting
+
+| Service | Platform | Free Tier |
+|---------|----------|-----------|
+| **API** (FastAPI) | [Fly.io](https://fly.io) | 3 shared VMs, 256MB each |
+| **Frontend** (Next.js) | [Vercel](https://vercel.com) | Unlimited static, 100GB bandwidth |
+
+### Deploy the API (Fly.io)
+
+```bash
+# 1. Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# 2. Login & launch
+flyctl auth login
+flyctl launch   # Creates app from fly.toml
+
+# 3. Set secrets (one-time)
+flyctl secrets set OPENAI_API_KEY="sk-..."
+flyctl secrets set OPENAI_MODEL="gpt-4o"
+flyctl secrets set OPENAI_FAST_MODEL="gpt-4o-mini"
+flyctl secrets set CORS_ORIGINS="https://your-app.vercel.app,http://localhost:3000"
+
+# 4. Deploy
+flyctl deploy
+```
+
+### Deploy the Frontend (Vercel)
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import repo: `devbyomar/history-tales-script-generator`
+3. Set **Root Directory** to `web`
+4. Add environment variable:
+   - `NEXT_PUBLIC_API_URL` = `https://history-tales-api.fly.dev`
+5. Click **Deploy**
+
+### Or Use the Deploy Script
+
+```bash
+./deploy.sh --set-secrets   # First time (sets Fly.io secrets)
+./deploy.sh                 # Subsequent deploys
+```
+
 ## License
 
 MIT
