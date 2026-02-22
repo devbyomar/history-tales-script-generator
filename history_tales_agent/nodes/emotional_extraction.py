@@ -47,7 +47,7 @@ def emotional_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        raw_drivers = call_llm_json(EMOTIONAL_EXTRACTION_SYSTEM, user_prompt)
+        raw_drivers = call_llm_json(EMOTIONAL_EXTRACTION_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("emotional_extraction_failed", error=str(e))
         return {

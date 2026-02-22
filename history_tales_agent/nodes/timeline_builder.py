@@ -52,7 +52,7 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        raw_beats = call_llm_json(TIMELINE_BUILDER_SYSTEM, user_prompt)
+        raw_beats = call_llm_json(TIMELINE_BUILDER_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("timeline_build_failed", error=str(e))
         return {

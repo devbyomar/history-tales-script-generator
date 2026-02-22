@@ -25,7 +25,7 @@ def emotional_intensity_node(state: dict[str, Any]) -> dict[str, Any]:
     user_prompt = EMOTIONAL_INTENSITY_USER.format(script=script[:12000])
 
     try:
-        result = call_llm_json(EMOTIONAL_INTENSITY_SYSTEM, user_prompt)
+        result = call_llm_json(EMOTIONAL_INTENSITY_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("emotional_intensity_failed", error=str(e))
         return {

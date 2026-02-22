@@ -45,7 +45,7 @@ def cross_check_node(state: dict[str, Any]) -> dict[str, Any]:
             claims_json=claims_json,
             corpus_summary=corpus_summary[:8000],
         )
-        checked = call_llm_json(CROSS_CHECK_SYSTEM, user_prompt)
+        checked = call_llm_json(CROSS_CHECK_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("cross_check_failed", error=str(e))
         return {"current_node": "CrossCheckNode"}

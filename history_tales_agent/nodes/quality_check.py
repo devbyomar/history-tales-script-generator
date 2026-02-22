@@ -59,7 +59,7 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        qc_result = call_llm_json(QC_SYSTEM, user_prompt)
+        qc_result = call_llm_json(QC_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("qc_failed", error=str(e))
         qc_result = {"overall_pass": False, "issues": [f"QC error: {str(e)}"], "recommendations": []}

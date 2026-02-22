@@ -31,10 +31,14 @@ def claims_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
 
     all_claims: list[Claim] = []
 
-    for item in corpus:
+    # Cap at 5 best sources to avoid excessive LLM calls
+    filtered_corpus = [item for item in corpus if item.get("text", "") and len(item.get("text", "")) >= 100]
+    filtered_corpus = filtered_corpus[:5]
+
+    logger.info("claims_extraction_sources", total_corpus=len(corpus), using=len(filtered_corpus))
+
+    for item in filtered_corpus:
         text = item.get("text", "")
-        if not text or len(text) < 100:
-            continue
 
         try:
             user_prompt = CLAIMS_EXTRACTION_USER.format(
@@ -44,7 +48,7 @@ def claims_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
                 source_url=item.get("url", ""),
             )
 
-            raw_claims = call_llm_json(CLAIMS_EXTRACTION_SYSTEM, user_prompt)
+            raw_claims = call_llm_json(CLAIMS_EXTRACTION_SYSTEM, user_prompt, tier="fast")
 
             for rc in raw_claims:
                 claim = Claim(
@@ -59,6 +63,14 @@ def claims_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
 
         except Exception as e:
             logger.warning("claims_extraction_error", source=item.get("title"), error=str(e))
+
+    # Cap total claims to avoid bloating downstream nodes
+    if len(all_claims) > 50:
+        logger.info("claims_capped", original=len(all_claims), capped=50)
+        # Prioritise High confidence, then Moderate, then Contested
+        priority = {"High": 0, "Moderate": 1, "Contested": 2}
+        all_claims.sort(key=lambda c: priority.get(c.confidence, 2))
+        all_claims = all_claims[:50]
 
     logger.info("claims_extraction_complete", total_claims=len(all_claims))
 

@@ -25,7 +25,7 @@ def sensory_density_node(state: dict[str, Any]) -> dict[str, Any]:
     user_prompt = SENSORY_DENSITY_USER.format(script=script[:12000])
 
     try:
-        result = call_llm_json(SENSORY_DENSITY_SYSTEM, user_prompt)
+        result = call_llm_json(SENSORY_DENSITY_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
         logger.error("sensory_density_failed", error=str(e))
         return {

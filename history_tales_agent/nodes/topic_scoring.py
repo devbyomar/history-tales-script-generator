@@ -54,7 +54,7 @@ def topic_scoring_node(state: dict[str, Any]) -> dict[str, Any]:
                 sensitivity_level=sensitivity,
                 video_length_minutes=video_length,
             )
-            raw_scores = call_llm_json(TOPIC_SCORING_SYSTEM, user_prompt)
+            raw_scores = call_llm_json(TOPIC_SCORING_SYSTEM, user_prompt, tier="fast")
             result = score_topic(candidate, raw_scores, sensitivity)
             scored_results.append(result)
         except Exception as e:

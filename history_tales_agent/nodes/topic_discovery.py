@@ -40,7 +40,7 @@ def topic_discovery_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        raw_candidates = call_llm_json(TOPIC_DISCOVERY_SYSTEM, user_prompt)
+        raw_candidates = call_llm_json(TOPIC_DISCOVERY_SYSTEM, user_prompt, tier="fast")
     except json.JSONDecodeError:
         logger.error("topic_discovery_json_parse_failed")
         return {
