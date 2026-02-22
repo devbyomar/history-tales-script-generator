@@ -93,7 +93,14 @@ Rules:
 - Rate confidence: High (well-documented), Moderate (generally accepted but debated details), Contested (historians disagree)
 - Flag any areas where "historians disagree" explicitly"""
 
-CLAIMS_EXTRACTION_USER = """Extract all key factual claims from this research material about: {topic_title}
+CLAIMS_EXTRACTION_USER = """Extract the TOP 10 most important and scriptable factual claims from this research material about: {topic_title}
+
+Focus on claims that:
+- Drive the narrative forward (key events, decisions, turning points)
+- Involve named real people, specific dates, or concrete actions
+- Are most useful for a documentary script
+
+Do NOT extract trivial facts, background context, or generic statements. Limit to 10 claims maximum.
 
 Research material:
 {research_text}
