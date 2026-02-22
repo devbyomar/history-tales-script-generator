@@ -14,6 +14,7 @@ from history_tales_agent.state import (
     Claim,
 )
 from history_tales_agent.utils.llm import call_llm_json
+from history_tales_agent.utils.feedback_memory import load_lessons_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -64,6 +65,12 @@ def outline_node(state: dict[str, Any]) -> dict[str, Any]:
         emotional_drivers_json=emotional_json,
         key_claims=key_claims,
     )
+
+    # ── Inject lessons from previous runs ──
+    lessons = load_lessons_prompt()
+    if lessons:
+        user_prompt = lessons + "\n\n" + user_prompt
+        logger.info("lessons_injected", node="OutlineNode", lessons_len=len(lessons))
 
     try:
         raw_sections = call_llm_json(OUTLINE_SYSTEM, user_prompt)

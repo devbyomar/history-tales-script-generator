@@ -18,6 +18,7 @@ from history_tales_agent.state import (
     TopicCandidate,
 )
 from history_tales_agent.utils.llm import call_llm
+from history_tales_agent.utils.feedback_memory import load_lessons_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -99,6 +100,12 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         rehook_interval=f"{rehook_interval[0]}–{rehook_interval[1]}",
         rehook_words=rehook_words,
     )
+
+    # ── Inject lessons from previous runs ──
+    lessons = load_lessons_prompt()
+    if lessons:
+        user_prompt = lessons + "\n\n" + user_prompt
+        logger.info("lessons_injected", node="ScriptGenerationNode", lessons_len=len(lessons))
 
     try:
         script = call_llm(system_prompt, user_prompt, temperature=0.75)

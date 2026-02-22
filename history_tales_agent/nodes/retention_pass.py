@@ -9,6 +9,7 @@ from history_tales_agent.prompts.templates import (
     RETENTION_PASS_USER,
 )
 from history_tales_agent.utils.llm import call_llm
+from history_tales_agent.utils.feedback_memory import load_lessons_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -41,6 +42,12 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
         max_words=max_words,
         script=script,
     )
+
+    # ── Inject lessons from previous runs ──
+    lessons = load_lessons_prompt()
+    if lessons:
+        user_prompt = lessons + "\n\n" + user_prompt
+        logger.info("lessons_injected", node="RetentionPassNode", lessons_len=len(lessons))
 
     try:
         revised = call_llm(RETENTION_PASS_SYSTEM, user_prompt, temperature=0.6)
