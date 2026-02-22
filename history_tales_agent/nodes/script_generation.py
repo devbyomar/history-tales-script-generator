@@ -13,6 +13,7 @@ from history_tales_agent.prompts.templates import (
 from history_tales_agent.state import (
     Claim,
     EmotionalDriver,
+    QCReport,
     ScriptSection,
     TimelineBeat,
     TopicCandidate,
@@ -41,6 +42,8 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
     video_length = state.get("video_length_minutes", 12)
     format_tag = state.get("format_tag", "Countdown")
     rehook_interval = state.get("rehook_interval", (60, 90))
+    iteration_count = state.get("iteration_count", 0)
+    qc_report: QCReport | None = state.get("qc_report")
 
     if not chosen or not outline:
         return {
@@ -106,6 +109,27 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
     if lessons:
         user_prompt = lessons + "\n\n" + user_prompt
         logger.info("lessons_injected", node="ScriptGenerationNode", lessons_len=len(lessons))
+
+    # ── On retry: inject QC feedback so the LLM knows what to fix ──
+    if iteration_count > 0 and qc_report and qc_report.issues:
+        qc_feedback = (
+            f"\n\n⚠️ REWRITE ATTEMPT {iteration_count} — PREVIOUS QC FAILED.\n"
+            f"The previous draft had these issues that MUST be fixed:\n"
+        )
+        for i, issue in enumerate(qc_report.issues, 1):
+            qc_feedback += f"  {i}. {issue}\n"
+        if qc_report.word_count:
+            qc_feedback += (
+                f"\nPrevious draft was {qc_report.word_count} words. "
+                f"Target range is {min_words}–{max_words} (target: {target_words}).\n"
+                f"PAY CAREFUL ATTENTION to the word count constraint.\n"
+            )
+        user_prompt = qc_feedback + "\n" + user_prompt
+        logger.info(
+            "qc_feedback_injected",
+            iteration=iteration_count,
+            issues=len(qc_report.issues),
+        )
 
     try:
         script = call_llm(system_prompt, user_prompt, temperature=0.75)

@@ -34,18 +34,18 @@ def _qc_route(state: dict) -> str:
 
     Routes back to script_generation when:
     - QC fails AND
-    - Word count is outside the target range AND
     - We haven't exceeded MAX_QC_RETRIES iterations
     """
     qc: QCReport | None = state.get("qc_report")
     iteration = state.get("iteration_count", 0)
 
-    if qc and not qc.overall_pass and not qc.word_count_in_range and iteration <= MAX_QC_RETRIES:
+    if qc and not qc.overall_pass and iteration <= MAX_QC_RETRIES:
         logger.info(
             "qc_rewrite_loop",
             iteration=iteration,
             word_count=qc.word_count,
             target=qc.target_words,
+            issues=len(qc.issues),
         )
         return "script_generation"
 
