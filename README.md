@@ -5,13 +5,16 @@ A production-ready LangGraph agent that autonomously generates high-retention, e
 ## Features
 
 - **Autonomous Pipeline**: 16-node LangGraph workflow from topic discovery to final script
+- **Dual-Model Architecture**: Creative tier (GPT-5) for writing, fast tier (GPT-5.2) for analysis — configurable via env vars
 - **Evidence-Led Research**: Only credible, non-paywalled sources (Wikipedia API, National Archives, Library of Congress, etc.)
 - **Retention Engineering**: Re-hooks every 60–120 seconds, escalating stakes, micro-payoff enforcement
 - **Emotional Authenticity**: Extracts doubt, miscalculation, moral tension, internal conflict
-- **Quality Assurance**: Emotional intensity meter, sensory density checks, cross-referencing
-- **Length Control**: Precise word count targeting at 155 words/minute ±10%
+- **Quality Assurance**: Emotional intensity meter, sensory density checks, cross-referencing, conditional QC→rewrite loop
+- **Feedback Memory**: Agent learns from past runs — recurring QC issues and recommendations are injected into future prompts
+- **Length Control**: Precise word count targeting at 155 words/minute ±10%, with expansion retry loop
 - **Format Rotation**: Six narrative formats with rotation enforcement
 - **Sources & Claims Log**: Full citation chain with confidence ratings
+- **Anti-Fabrication**: Strict rules preventing fictional/composite characters across all prompts
 
 ## Quick Start
 
@@ -27,6 +30,19 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your OpenAI API key
 ```
+
+**Environment Variables:**
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | ✅ | — | Your OpenAI API key |
+| `OPENAI_MODEL` | ❌ | `gpt-4o` | Creative tier model (script writing, outline, retention pass) |
+| `OPENAI_FAST_MODEL` | ❌ | — | Fast tier model for analytical nodes (scoring, extraction, QC). Falls back to `OPENAI_MODEL` if unset |
+| `OPENAI_TEMPERATURE` | ❌ | `0.7` | Base temperature for LLM calls |
+| `MAX_REQUESTS_PER_MINUTE` | ❌ | `20` | Rate limiter ceiling |
+| `MAX_TOKENS_PER_MINUTE` | ❌ | `150000` | Token rate limit |
+| `ENABLE_CACHE` | ❌ | `true` | Cache HTTP responses to `.cache/` |
+| `LOG_LEVEL` | ❌ | `INFO` | Logging verbosity |
 
 ### 3. Run the Agent
 
@@ -65,23 +81,50 @@ print(result["final_script"])
 ## Architecture
 
 ```
-TopicDiscoveryNode
-  → FormatRotationGuardNode
-  → TopicScoringNode
-  → ResearchFetchNode
-  → SourceCredibilityNode
-  → ClaimsExtractionNode
-  → CrossCheckNode
-  → TimelineBuilderNode
-  → EmotionalArtifactExtractionNode
-  → OutlineNode
-  → ScriptGenerationNode
-  → RetentionPassNode
-  → EmotionalIntensityMeterNode
-  → SensoryDensityCheckNode
-  → QualityCheckNode
-  → FinalizeNode
+TopicDiscoveryNode          ← fast tier
+  → FormatRotationGuardNode   (no LLM)
+  → TopicScoringNode          ← fast tier
+  → ResearchFetchNode         (no LLM)
+  → SourceCredibilityNode     (no LLM)
+  → ClaimsExtractionNode      ← fast tier (capped: 5 sources × 10 claims)
+  → CrossCheckNode            ← fast tier
+  → TimelineBuilderNode       ← fast tier
+  → EmotionalExtractionNode   ← fast tier
+  → OutlineNode               ← creative tier + lessons injection
+  → ScriptGenerationNode      ← creative tier + lessons injection
+  → RetentionPassNode         ← creative tier + lessons injection
+  → EmotionalIntensityNode    ← fast tier
+  → SensoryDensityCheckNode   ← fast tier
+  → QualityCheckNode          ← fast tier (loops back to ScriptGeneration if QC fails, max 2 retries)
+  → FinalizeNode              (no LLM — saves feedback to .memory/)
 ```
+
+### Dual-Model Tiers
+
+| Tier | Env Var | Used By | Why |
+|------|---------|---------|-----|
+| **Creative** | `OPENAI_MODEL` | Outline, ScriptGeneration, RetentionPass | Deep, nuanced writing quality |
+| **Fast** | `OPENAI_FAST_MODEL` | TopicDiscovery, Scoring, Claims, CrossCheck, Timeline, Emotional, Sensory, QC | Structured JSON extraction — speed over prose |
+
+If `OPENAI_FAST_MODEL` is not set, all nodes fall back to `OPENAI_MODEL`.
+
+### Feedback Memory (Cross-Run Learning)
+
+After every run, the agent saves QC issues and recommendations to `.memory/`:
+
+```
+.memory/
+├── feedback_log.jsonl      # Raw feedback from every run (append-only)
+└── distilled_lessons.json  # Recurring patterns, word count trends, pass rate
+```
+
+On the next run, the **Outline**, **ScriptGeneration**, and **RetentionPass** nodes automatically load distilled lessons and prepend them to their prompts. The agent learns to:
+
+- Avoid recurring issues (e.g., "scripts tend to run LONG at 158% of target")
+- Follow past recommendations (e.g., "complete Act 3 before closing")
+- Improve pass rate over successive runs
+
+The `.memory/` directory is gitignored — each user's agent learns independently.
 
 ## Input Parameters
 
@@ -166,7 +209,8 @@ history_tales_agent/
 │   └── topic_scorer.py
 ├── utils/                 # Shared utilities
 │   ├── __init__.py
-│   ├── llm.py
+│   ├── llm.py             # Dual-model LLM wrapper with rate limiting
+│   ├── feedback_memory.py # Cross-run learning system
 │   ├── retry.py
 │   ├── cache.py
 │   └── logging.py
@@ -177,9 +221,12 @@ history_tales_agent/
 
 ## Scaling Notes
 
+- **Dual-Model**: Use a fast model (GPT-5.2, GPT-4o-mini) for analytical nodes and a creative model (GPT-5, GPT-4o) for writing — balances speed and quality
+- **Feedback Loop**: The more runs you do, the better the agent gets — feedback memory distills patterns automatically
 - **Batch Processing**: Wrap `run_agent()` in async loop for bulk generation
 - **Caching**: HTTP responses cached by default to `.cache/` — reduces API costs on reruns
-- **Model Swapping**: Change `OPENAI_MODEL` in `.env` to use GPT-4o-mini for drafts
+- **Claims Capping**: Extraction limited to 5 sources × 10 claims (50 max) to prevent token bloat
+- **QC Retry Loop**: Conditional loop back to ScriptGeneration (max 2 retries) if word count or quality fails
 - **Parallel Research**: Research fetches run concurrently across sources
 - **State Checkpointing**: LangGraph state can be persisted for resumption
 
