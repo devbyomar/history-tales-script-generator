@@ -1,6 +1,7 @@
 # Project-specific
 /output/
 .cache/
+.memory/
 .env
 
 # Byte-compiled / optimized / DLL files
