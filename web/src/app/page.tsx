@@ -10,6 +10,7 @@ import {
   streamRun,
   listRuns,
   getRun,
+  cancelRun,
   type GenerateParams,
   type NodeProgress,
   type RunDetail,
@@ -20,6 +21,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [events, setEvents] = useState<NodeProgress[]>([]);
   const [currentRun, setCurrentRun] = useState<RunDetail | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -38,12 +41,15 @@ export default function HomePage() {
     setIsLoading(true);
     setIsRunning(true);
     setIsFailed(false);
+    setIsCancelled(false);
     setEvents([]);
     setCurrentRun(null);
     setError(null);
+    setActiveRunId(null);
 
     try {
       const { run_id } = await startGeneration(params);
+      setActiveRunId(run_id);
 
       setIsLoading(false);
 
@@ -54,6 +60,7 @@ export default function HomePage() {
         },
         onComplete: async () => {
           setIsRunning(false);
+          setActiveRunId(null);
           // Fetch the completed run
           try {
             const run = await getRun(run_id);
@@ -65,9 +72,22 @@ export default function HomePage() {
             setError("Failed to fetch completed run");
           }
         },
+        onCancelled: async () => {
+          setIsRunning(false);
+          setIsCancelled(true);
+          setActiveRunId(null);
+          // Refresh run history
+          try {
+            const updatedRuns = await listRuns();
+            setRuns(updatedRuns);
+          } catch (e) {
+            // ignore
+          }
+        },
         onError: (errorMsg) => {
           setIsRunning(false);
           setIsFailed(true);
+          setActiveRunId(null);
           setError(errorMsg);
           setIsLoading(false);
         },
@@ -79,6 +99,7 @@ export default function HomePage() {
       setIsLoading(false);
       setIsRunning(false);
       setIsFailed(true);
+      setActiveRunId(null);
       setError(e.message || "Failed to start generation");
     }
   }, []);
@@ -90,10 +111,20 @@ export default function HomePage() {
       setEvents([]);
       setIsRunning(false);
       setIsFailed(run.status === "failed");
+      setIsCancelled(run.status === "cancelled");
     } catch (e) {
       setError("Failed to load run");
     }
   }, []);
+
+  const handleCancel = useCallback(async () => {
+    if (!activeRunId) return;
+    try {
+      await cancelRun(activeRunId);
+    } catch (e: any) {
+      setError(e.message || "Failed to cancel run");
+    }
+  }, [activeRunId]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -122,6 +153,8 @@ export default function HomePage() {
             events={events}
             isRunning={isRunning}
             isFailed={isFailed}
+            isCancelled={isCancelled}
+            onCancel={handleCancel}
           />
         )}
 

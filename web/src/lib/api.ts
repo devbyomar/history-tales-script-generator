@@ -21,7 +21,7 @@ export interface GenerateParams {
 
 export interface RunSummary {
   run_id: string;
-  status: "running" | "completed" | "failed";
+  status: "running" | "completed" | "failed" | "cancelled";
   created_at: string;
   completed_at?: string;
   video_length_minutes: number;
@@ -105,12 +105,26 @@ export async function getRun(runId: string): Promise<RunDetail> {
   return res.json();
 }
 
+export async function cancelRun(
+  runId: string
+): Promise<{ run_id: string; status: string; message: string }> {
+  const res = await fetch(`${API_URL}/runs/${runId}/cancel`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || "Failed to cancel run");
+  }
+  return res.json();
+}
+
 export function streamRun(
   runId: string,
   callbacks: {
     onProgress: (event: NodeProgress) => void;
     onComplete: () => void;
     onError: (error: string) => void;
+    onCancelled?: () => void;
   }
 ): () => void {
   const evtSource = new EventSource(`${API_URL}/runs/${runId}/stream`);
@@ -126,6 +140,15 @@ export function streamRun(
 
   evtSource.addEventListener("complete", () => {
     callbacks.onComplete();
+    evtSource.close();
+  });
+
+  evtSource.addEventListener("cancelled", () => {
+    if (callbacks.onCancelled) {
+      callbacks.onCancelled();
+    } else {
+      callbacks.onError("Pipeline cancelled");
+    }
     evtSource.close();
   });
 

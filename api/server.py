@@ -71,8 +71,9 @@ async def generate_script(request: GenerateRequest):
     params = request.model_dump()
     run_id = run_store.create_run(params)
 
-    # Fire-and-forget the pipeline in background
-    asyncio.create_task(run_pipeline(run_id, params))
+    # Fire-and-forget the pipeline in background — store the task handle
+    task = asyncio.create_task(run_pipeline(run_id, params))
+    run_store.set_task(run_id, task)
 
     return {
         "run_id": run_id,
@@ -112,7 +113,7 @@ async def stream_run(run_id: str):
 
         # If already completed, send final event and close
         current_run = run_store.get_run(run_id)
-        if current_run and current_run.status in ("completed", "failed"):
+        if current_run and current_run.status in ("completed", "failed", "cancelled"):
             yield {
                 "event": current_run.status,
                 "data": json.dumps({"run_id": run_id, "status": current_run.status}),
@@ -128,8 +129,8 @@ async def stream_run(run_id: str):
                     event_type = "node_progress"
                     if event.node == "__complete__":
                         event_type = "complete"
-                    elif event.node == "__error__":
-                        event_type = "error"
+                    elif event.node in ("__error__", "__cancelled__"):
+                        event_type = "error" if event.node == "__error__" else "cancelled"
 
                     yield {
                         "event": event_type,
@@ -137,7 +138,7 @@ async def stream_run(run_id: str):
                     }
 
                     # Close stream after terminal events
-                    if event_type in ("complete", "error"):
+                    if event_type in ("complete", "error", "cancelled"):
                         return
                 except asyncio.TimeoutError:
                     # Send keepalive
@@ -146,6 +147,30 @@ async def stream_run(run_id: str):
             run_store.unsubscribe(run_id, queue)
 
     return EventSourceResponse(event_generator())
+
+
+# ---------------------------------------------------------------------------
+# Cancel
+# ---------------------------------------------------------------------------
+
+
+@app.post("/runs/{run_id}/cancel")
+async def cancel_run(run_id: str):
+    """Cancel a running pipeline."""
+    run = run_store.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    if run.status != "running":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Run {run_id} is not running (status: {run.status})",
+        )
+
+    success = run_store.cancel_run(run_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to cancel run")
+
+    return {"run_id": run_id, "status": "cancelled", "message": "Cancellation requested"}
 
 
 # ---------------------------------------------------------------------------
