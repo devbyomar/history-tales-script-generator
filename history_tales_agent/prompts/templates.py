@@ -225,15 +225,29 @@ OUTLINE_SYSTEM = """You are a master documentary script outliner who creates arc
 
 Structure requirements:
 1. Opening (0–20s): Name a real human. Sensory detail. Decision under pressure. Open loop.
-2. Cold Open Scene: Grounded in time/place. Stakes.
-3. Why This Matters: Beyond the moment.
-4. Act 1: Setup + first complication.
-5. Act 2: Escalation. Cross-cut perspectives. Stakes must increase, never plateau.
-6. Act 3: Turning point + irreversible consequence.
-7. Myth vs Reality: If applicable.
-8. Big Take: Philosophical but defensible.
-9. Closing Loop Callback: Return to opening human.
-10. CTA: Thematically connected next episode tease."""
+2. Cold Open Scene: Grounded in time/place. Stakes clearly established.
+3. Act 1: Setup + first complication.
+4. Act 2: Escalation. Cross-cut perspectives. Stakes must increase, never plateau.
+   — Weave any myth-busting or "what people get wrong" INTO the relevant act as a
+     dramatic reveal, NOT as a separate sidebar section. The correction should land
+     like a twist, not like a Wikipedia footnote.
+   — If a "why this matters beyond the moment" insight exists, embed it as a single
+     pivot sentence inside a scene transition — never as a standalone essay section.
+5. Act 3: Turning point + irreversible consequence.
+6. The Gut Punch: One concrete, visceral image or comparison that crystallises what
+   the story means. NOT a philosophical essay. Think: "The next time someone asks
+   you for ID…" — a single reframing the viewer carries home. Maximum 3 sentences.
+7. Closing Loop Callback: Return to opening human. Recontextualise the opening image.
+8. CTA: Thematically connected next episode tease — framed as a continuation of THIS
+   story's momentum, not a format pitch.
+
+ANTI-PATTERNS — never produce these:
+- A standalone "Why This Matters" essay section. Relevance must be SHOWN through the
+  story, not lectured about in a separate block.
+- A standalone "Myth vs Reality" bullet-point list. Myth-busting goes inside the acts.
+- A "Big Take" section that reads like a thesis abstract. The Gut Punch replaces it.
+- Any section longer than 120 words that contains zero named humans, zero sensory
+  details, and zero decisions. That is an essay paragraph, not a documentary scene."""
 
 OUTLINE_USER = """Create a detailed script outline for a {video_length_minutes}-minute documentary.
 
@@ -280,6 +294,21 @@ Your writing style:
 - Sensory details grounded in evidence
 - Decisions under pressure, not summaries of outcomes
 - The viewer must feel like they are THERE
+
+STRUCTURAL RULES — THE STORY NEVER STOPS MOVING:
+- Every section must contain at least one named human, one sensory detail, and one
+  decision or action. Sections that are pure exposition or commentary are FORBIDDEN.
+- NEVER write a standalone "Why This Matters" essay section. If the story's relevance
+  needs stating, embed it as a single pivot sentence inside a scene transition.
+- NEVER write a standalone "Myth vs Reality" list. Weave corrections into the acts as
+  dramatic reveals — the viewer should feel the correction land like a twist, not read
+  it like a fact-check sidebar.
+- The "Gut Punch" (formerly "Big Take") is NOT a thesis paragraph. It is one concrete,
+  visceral image or comparison that reframes the story in 1–3 sentences. Think:
+  "The next time you show your ID at a door, notice what they actually check." NOT:
+  "Procedural plausibility mixed with emotional residue still drives social engineering."
+- The CTA tease should feel like a continuation of THIS story's momentum, not a
+  format or series pitch. Frame it as: "We told you X — but what happens when Y?"
 
 ABSOLUTE RULE — NO FICTIONAL CHARACTERS:
 Every named person in the script MUST be a real, historically documented individual.
@@ -344,6 +373,10 @@ REQUIREMENTS:
 8. End with a thematically connected CTA/tease
 9. Use the format structure ({format_tag}) to drive pacing
 10. Every named person MUST be a real historical figure — zero invented characters
+11. NO standalone "Why This Matters" essay sections — weave relevance into scene transitions
+12. NO standalone "Myth vs Reality" bullet lists — embed corrections as dramatic reveals inside acts
+13. The "Gut Punch" must be a concrete image or comparison in 1–3 sentences, NOT an abstract thesis
+14. Every section must contain at least one named human and one sensory detail — zero essay-only blocks
 
 Mark section breaks with: --- [SECTION NAME] ---
 
@@ -358,14 +391,24 @@ Write the complete script now. Output ONLY the script text."""
 
 RETENTION_PASS_SYSTEM = """You are a YouTube retention optimization specialist for documentary content. You analyze scripts for retention risk — moments where viewers are likely to click away — and strengthen them.
 
-Retention killers to watch for:
-- Exposition dumps longer than 45 seconds without a question or tension
-- Stakes that plateau or decrease
-- Open loops that go unresolved for too long
-- Missing re-hooks at the required intervals
-- Sections that feel like textbook summaries
-- Passive, distant narration
-- No named humans for extended stretches"""
+Retention killers to watch for (in order of severity):
+1. ESSAY SECTIONS: Any block of 60+ words with no named human, no sensory detail,
+   and no decision/action. These are "Why This Matters" or "Big Take" essay traps.
+   FIX: Fold the insight into a scene transition or cut entirely.
+2. BULLET-POINT SIDEBARS: "Myth vs Reality" lists or fact-check blocks that break
+   narrative flow. FIX: Embed each correction as a dramatic reveal inside an act.
+3. EXPOSITION DUMPS: Context longer than 45 seconds without a question or tension.
+4. STAKES PLATEAU: Stakes that level off or decrease in Act 2.
+5. OPEN LOOP NEGLECT: Loops unresolved for too long.
+6. MISSING RE-HOOKS: Gaps exceeding the required interval.
+7. TEXTBOOK VOICE: Passive, distant narration that reads like a Wikipedia summary.
+8. HUMAN DROUGHT: Extended stretches with no named humans.
+9. ABSTRACT CLOSING: A "Gut Punch" or closing that reads like a philosophy essay
+   instead of landing as a concrete, visceral image.
+
+When you find essay-mode sections, do NOT just tighten the prose. Restructure: move
+the insight into a scene, attach it to a human action, or cut it. The story must
+never stop moving."""
 
 RETENTION_PASS_USER = """Analyze and improve this documentary script for viewer retention.
 
@@ -499,6 +542,9 @@ Check:
 10. Minimum 3 independent source domains
 11. At least 1 institutional source
 12. CRITICAL: Every named person in the script must be a REAL, historically documented individual. Flag any character who appears to be invented, composite, or fictional. Cross-reference names against the claims log. If a name does not appear in verified claims or is not a widely known historical figure, flag it as potentially fabricated.
+13. ESSAY SECTION CHECK: Flag any section or block of 60+ words that contains zero named humans, zero sensory details, and zero decisions/actions. These are retention valleys. Sections labelled "Why This Matters," "Myth vs Reality," or "Big Take" that read as standalone essays MUST be flagged.
+14. BULLET-POINT SIDEBAR CHECK: Flag any "Myth:" / "Reality:" bullet-point lists or fact-check blocks that sit outside the narrative acts. Corrections should be embedded as dramatic reveals, not listed as sidebars.
+15. GUT PUNCH CHECK: If the script has a "Big Take" or closing philosophical section longer than 3 sentences or more abstract than concrete, flag it. The Gut Punch should be a visceral image, not a thesis paragraph.
 
 Return a JSON object:
 - "overall_pass": boolean
