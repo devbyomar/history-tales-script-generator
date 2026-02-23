@@ -6,6 +6,7 @@ In production, replace with Supabase/PostgreSQL persistence.
 from __future__ import annotations
 
 import asyncio
+import threading
 from datetime import datetime
 from typing import Any, Optional
 from uuid import uuid4
@@ -22,6 +23,7 @@ class RunStore:
         self._subscribers: dict[str, list[asyncio.Queue]] = {}
         self._tasks: dict[str, asyncio.Task] = {}
         self._cancelled: set[str] = set()
+        self._cancel_events: dict[str, threading.Event] = {}
 
     def create_run(self, params: dict[str, Any]) -> str:
         """Create a new run entry and return its ID."""
@@ -99,8 +101,12 @@ class RunStore:
         """Store the asyncio Task handle for a run."""
         self._tasks[run_id] = task
 
+    def set_cancel_event(self, run_id: str, event: threading.Event) -> None:
+        """Store a threading Event used to signal cancellation to the pipeline thread."""
+        self._cancel_events[run_id] = event
+
     def cancel_run(self, run_id: str) -> bool:
-        """Mark a run as cancelled and cancel its asyncio Task.
+        """Mark a run as cancelled and signal the pipeline thread to stop.
 
         Returns True if the run was successfully marked for cancellation.
         """
@@ -110,7 +116,12 @@ class RunStore:
 
         self._cancelled.add(run_id)
 
-        # Cancel the asyncio task if it exists
+        # Signal the threading.Event so the pipeline thread exits
+        cancel_event = self._cancel_events.get(run_id)
+        if cancel_event:
+            cancel_event.set()
+
+        # Also cancel the asyncio task
         task = self._tasks.get(run_id)
         if task and not task.done():
             task.cancel()
