@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from history_tales_agent.state import AgentState, Claim, QCReport, SourceEntry
+from history_tales_agent.output.elevenlabs_formatter import write_elevenlabs_script
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -122,5 +123,11 @@ def format_output(state: dict[str, Any], output_dir: str = "output") -> Path:
     meta_path = out / "metadata.json"
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     logger.info("wrote_metadata", path=str(meta_path))
+
+    # --- script_elevenlabs.txt ---
+    try:
+        write_elevenlabs_script(state, output_dir)
+    except Exception as e:
+        logger.warning("elevenlabs_format_failed", error=str(e))
 
     return out

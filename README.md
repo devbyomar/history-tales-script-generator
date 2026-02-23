@@ -4,10 +4,12 @@ A production-ready LangGraph agent that autonomously generates high-retention, e
 
 ## Features
 
-- **Autonomous Pipeline**: 16-node LangGraph workflow from topic discovery to final script
+- **Autonomous Pipeline**: 18-node LangGraph workflow from topic discovery to final script
 - **Dual-Model Architecture**: Creative tier (GPT-5) for writing, fast tier (GPT-5.2) for analysis — configurable via env vars
 - **Evidence-Led Research**: Only credible, non-paywalled sources (Wikipedia API, National Archives, Library of Congress, etc.)
-- **Retention Engineering**: Re-hooks every 60–120 seconds, escalating stakes, micro-payoff enforcement
+- **Hard Guardrails**: Deterministic validation gates enforce entity provenance, word count, rehook cadence, tension escalation, and essay-block detection — no LLM hallucination can bypass these
+- **Fact-Tighten Pass**: Two-stage script generation — draft → fact-tighten with per-paragraph trace tags `[Beat Bxx | Claims Cxxx]`
+- **Retention Engineering**: Re-hooks every 60–120 seconds, escalating stakes, micro-payoff enforcement; surgery-only retention pass (no new entities or events)
 - **Emotional Authenticity**: Extracts doubt, miscalculation, moral tension, internal conflict
 - **Quality Assurance**: Emotional intensity meter, sensory density checks, cross-referencing, conditional QC→rewrite loop
 - **Feedback Memory**: Agent learns from past runs — recurring QC issues and recommendations are injected into future prompts
@@ -86,13 +88,15 @@ TopicDiscoveryNode          ← fast tier
   → TopicScoringNode          ← fast tier
   → ResearchFetchNode         (no LLM)
   → SourceCredibilityNode     (no LLM)
-  → ClaimsExtractionNode      ← fast tier (capped: 5 sources × 10 claims)
-  → CrossCheckNode            ← fast tier
-  → TimelineBuilderNode       ← fast tier
+  → ClaimsExtractionNode      ← fast tier (C001… IDs, named_entities, date_anchor, quote_candidate)
+  → CrossCheckNode            ← fast tier (adds script_language per claim)
+  → TimelineBuilderNode       ← fast tier (tension escalation validated deterministically)
   → EmotionalExtractionNode   ← fast tier
-  → OutlineNode               ← creative tier + lessons injection
-  → ScriptGenerationNode      ← creative tier + lessons injection
-  → RetentionPassNode         ← creative tier + lessons injection
+  → OutlineNode               ← creative tier + lessons injection (minute_range, rehook_plan)
+  → HardGuardrailsNode        (no LLM — deterministic validation gate)
+  → ScriptGenerationNode      ← creative tier + lessons injection (Stage A: draft)
+  → FactTightenNode           ← creative tier (Stage B: trace tags + post-script validation)
+  → RetentionPassNode         ← creative tier + lessons injection (surgery-only: no new entities)
   → EmotionalIntensityNode    ← fast tier
   → SensoryDensityCheckNode   ← fast tier
   → QualityCheckNode          ← fast tier (loops back to ScriptGeneration if QC fails, max 2 retries)
@@ -125,6 +129,59 @@ On the next run, the **Outline**, **ScriptGeneration**, and **RetentionPass** no
 - Improve pass rate over successive runs
 
 The `.memory/` directory is gitignored — each user's agent learns independently.
+
+### Validation Gates (`validators.py`)
+
+The pipeline uses **deterministic validators** that cannot be bypassed by LLM hallucination. These run at two checkpoints:
+
+#### Pre-Script Gate (HardGuardrailsNode — between Outline and ScriptGeneration)
+
+| Validator | Code | Severity | What it checks |
+|-----------|------|----------|----------------|
+| Outline word-sum | `OUTLINE_WORD_SUM_MISMATCH` | soft | Section word counts must sum to target ±10% |
+| Open-loop resolution | `OPEN_LOOP_UNRESOLVED` | soft | Every open loop must resolve within 2 sections |
+| Tension escalation | `TENSION_TOO_MANY_DIPS` | hard | At most 2 non-increasing tension transitions |
+| Tension spike recovery | `TENSION_NO_SPIKE_AFTER_DIP` | soft | Any dip must recover +2 within 1 beat |
+| Twist distribution | `TWIST_DISTRIBUTION_SKEWED` | soft | ≥50% of twists must fall in Act 2 range |
+| No twists | `NO_TWISTS` | hard | Timeline must have at least one twist beat |
+
+Any issues found are injected as feedback into the ScriptGeneration prompt.
+
+#### Post-Script Gate (FactTightenNode — after draft generation)
+
+| Validator | Code | Severity | What it checks |
+|-----------|------|----------|----------------|
+| Word count | `WORD_COUNT_UNDER` / `WORD_COUNT_OVER` | hard | Script must be within min_words–max_words |
+| Entity provenance | `ENTITY_NOT_IN_CLAIMS` | hard | Every named human must appear in verified claims or timeline beats |
+| Rehook cadence | `REHOOK_GAP` | soft | No stretch > 1.25× rehook interval without a re-hook signal |
+| Essay blocks | `ESSAY_BLOCK` | hard | No 60+ word blocks with zero names, sensory cues, or decision verbs |
+
+#### Retention Surgery Guard (RetentionPassNode)
+
+| Validator | Code | Severity | What it checks |
+|-----------|------|----------|----------------|
+| No new entities | `RETENTION_NEW_ENTITY` | hard | Retention pass cannot introduce named humans not in the original script |
+
+If the retention pass introduces new entities or violates word count, the original script is used instead.
+
+#### Two-Stage Script Generation
+
+Script generation is split into two stages:
+
+1. **Stage A (ScriptGenerationNode)**: Writes the draft from outline + verified claims + script_language
+2. **Stage B (FactTightenNode)**: Rewrites the draft and appends hidden trace tags per paragraph:
+   ```
+   The general ordered the advance. [Beat B03 | Claims C001,C012]
+   ```
+   These tags are stripped from `final_script` but available for audit via `extract_trace_tags()`.
+
+#### Running Validator Tests
+
+```bash
+pytest tests/test_validators.py -v
+```
+
+41 tests cover all schemas, validators, trace-tag utilities, and integration scenarios.
 
 ## Input Parameters
 

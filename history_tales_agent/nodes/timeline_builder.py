@@ -12,6 +12,10 @@ from history_tales_agent.prompts.templates import (
 from history_tales_agent.state import Claim, TimelineBeat, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
 from history_tales_agent.utils.logging import get_logger
+from history_tales_agent.validators import (
+    validate_tension_escalation,
+    validate_twist_distribution,
+)
 
 logger = get_logger(__name__)
 
@@ -75,7 +79,19 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("timeline_built", beats=len(beats), twists=sum(1 for b in beats if b.is_twist))
 
+    # ── Deterministic tension & twist validation ──
+    beats_dicts = [
+        {"tension_level": b.tension_level, "is_twist": b.is_twist} for b in beats
+    ]
+    tension_issues = validate_tension_escalation(beats_dicts)
+    twist_issues = validate_twist_distribution(beats_dicts)
+    validation_warnings = []
+    for issue in tension_issues + twist_issues:
+        validation_warnings.append(f"[{issue.code}] {issue.message}")
+        logger.warning("timeline_validation", code=issue.code, message=issue.message)
+
     return {
         "timeline_beats": beats,
+        "validation_issues": state.get("validation_issues", []) + validation_warnings,
         "current_node": "TimelineBuilderNode",
     }

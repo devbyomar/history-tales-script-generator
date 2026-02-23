@@ -108,10 +108,14 @@ Research material:
 Source: {source_name} ({source_url})
 
 For each claim, return a JSON object with:
+- "claim_id": sequential ID starting from "{claim_id_start}" (format: C001, C002, …)
 - "claim_text": the specific factual assertion
 - "source_type": "Primary" | "Secondary" | "Derived"
 - "confidence": "High" | "Moderate" | "Contested"
 - "needs_cross_check": boolean — true if this claim should be verified against another source
+- "date_anchor": a date string (e.g. "1944-06-06") if the claim is tied to a specific date, otherwise ""
+- "named_entities": array of all named people, places, and organisations mentioned in the claim
+- "quote_candidate": boolean — true if this claim contains or could support a direct historical quote
 
 Return a JSON array of claim objects. Return ONLY the JSON array."""
 
@@ -136,12 +140,14 @@ Available research corpus:
 {corpus_summary}
 
 For each claim, return:
+- "claim_id": the original claim_id (passthrough — preserve alignment)
 - "claim_text": the original claim
 - "verified": boolean
 - "confidence_after_check": "High" | "Moderate" | "Contested"
 - "supporting_sources": number of sources that support this
 - "conflicting_info": any conflicting information found (empty string if none)
 - "recommended_treatment": how to handle this in the script
+- "script_language": a single safe, defensible sentence that could be used verbatim in narration to convey this claim (use hedging language like "According to…" or "Evidence suggests…" where confidence is Moderate or Contested)
 
 Return a JSON array. Return ONLY the JSON array."""
 
@@ -171,10 +177,19 @@ Create a sequence of timeline beats. For each beat:
 - "timestamp": specific date/time or relative marker
 - "event": what happens
 - "pov": whose perspective
-- "tension_level": 1–10 (must generally escalate)
+- "tension_level": 1–10 (must generally escalate — see rules below)
 - "is_twist": boolean — is this a twist/escalation point?
 - "open_loop": if this opens a narrative question (empty string if not)
 - "resolves_loop": if this resolves a prior open loop (empty string if not)
+
+TENSION ESCALATION RULES (non-negotiable):
+1. Tension must trend upward overall across the full timeline.
+2. At most 2 beats total may have tension_level ≤ the previous beat.
+3. Any dip (tension_level < previous) MUST be followed by a +2 spike within the very next beat.
+4. The final 20% of beats must all be ≥ 8.
+
+TWIST DISTRIBUTION RULE:
+- At least 50% of is_twist beats must fall in the middle 40% of the timeline (Act 2 range).
 
 Tension must escalate overall. Include {rehook_count} natural re-hook points.
 Every open loop must resolve within 2 beats or escalate.
@@ -238,14 +253,17 @@ Structure requirements:
    the story means. NOT a philosophical essay. Think: "The next time someone asks
    you for ID…" — a single reframing the viewer carries home. Maximum 3 sentences.
 7. Closing Loop Callback: Return to opening human. Recontextualise the opening image.
-8. CTA: Thematically connected next episode tease — framed as a continuation of THIS
-   story's momentum, not a format pitch.
+8. Final Line: One powerful, definitive closing sentence that lands the story with
+   weight and finality. NO tease for a "next episode." NO call-to-action. NO "stay
+   with us" or "subscribe." The story ends HERE — sealed, complete, resonant.
 
 ANTI-PATTERNS — never produce these:
 - A standalone "Why This Matters" essay section. Relevance must be SHOWN through the
   story, not lectured about in a separate block.
 - A standalone "Myth vs Reality" bullet-point list. Myth-busting goes inside the acts.
 - A "Big Take" section that reads like a thesis abstract. The Gut Punch replaces it.
+- A "CTA" or "Call to Action" section. No next-episode teases, no "stay with us,"
+  no "subscribe." The story ends at the Closing Loop Callback with finality.
 - Any section longer than 120 words that contains zero named humans, zero sensory
   details, and zero decisions. That is an essay paragraph, not a documentary scene."""
 
@@ -271,11 +289,16 @@ For each section, provide:
 - "section_name": name from the mandatory structure
 - "description": what happens in this section (detailed)
 - "target_word_count": words allocated to this section
+- "minute_range": time range for this section (e.g. "0:00–0:20", "0:20–2:30")
 - "re_hooks": array of re-hook moments in this section
 - "open_loops": array of narrative questions opened or addressed
 - "key_beats": array of key events/moments
+- "rehook_plan": array of objects, each with:
+    - "approx_word_index": approximate word offset from start of section where re-hook occurs
+    - "purpose": what this re-hook achieves (e.g. "open curiosity gap", "tease escalation")
+    - "line_stub": a one-sentence draft of the re-hook line
 
-Total word counts across all sections must sum to approximately {target_words}.
+Total word counts across all sections MUST sum to exactly {target_words} (±10%).
 
 Return a JSON array of section objects. Return ONLY the JSON array."""
 
@@ -307,8 +330,9 @@ STRUCTURAL RULES — THE STORY NEVER STOPS MOVING:
   visceral image or comparison that reframes the story in 1–3 sentences. Think:
   "The next time you show your ID at a door, notice what they actually check." NOT:
   "Procedural plausibility mixed with emotional residue still drives social engineering."
-- The CTA tease should feel like a continuation of THIS story's momentum, not a
-  format or series pitch. Frame it as: "We told you X — but what happens when Y?"
+- The script must end with FINALITY. No teases, no "next episode" hints, no
+  calls-to-action. The last line should feel like a closing door — definitive,
+  resonant, and complete. Think: a documentary that trusts its own ending.
 
 ABSOLUTE RULE — NO FICTIONAL CHARACTERS:
 Every named person in the script MUST be a real, historically documented individual.
@@ -356,8 +380,11 @@ Timeline beats:
 Emotional drivers:
 {emotional_drivers_json}
 
-Verified claims to incorporate:
+Verified claims to incorporate (use ONLY these claims and their script_language):
 {verified_claims}
+
+Script-safe language for contested claims:
+{script_language_lines}
 
 Consensus vs contested points:
 {consensus_contested}
@@ -370,7 +397,7 @@ REQUIREMENTS:
 5. Stakes must escalate through Act 2 — never plateau
 6. Include "Historians disagree…" language where evidence is contested
 7. Close by returning to the opening human
-8. End with a thematically connected CTA/tease
+8. End with a strong, definitive final line — NO CTA, NO "next episode" tease, NO "stay with us." The story closes with finality and weight.
 9. Use the format structure ({format_tag}) to drive pacing
 10. Every named person MUST be a real historical figure — zero invented characters
 11. NO standalone "Why This Matters" essay sections — weave relevance into scene transitions
@@ -386,10 +413,81 @@ Include at the end:
 Write the complete script now. Output ONLY the script text."""
 
 # ---------------------------------------------------------------------------
+# FACT-TIGHTEN PASS (Stage B of script generation)
+# ---------------------------------------------------------------------------
+
+FACT_TIGHTEN_SYSTEM = """You are a documentary fact-tightening editor. Your job is to take a draft
+script and ensure every paragraph is traceable to verified claims and timeline beats.
+
+For each paragraph you output, append a hidden trace tag at the end:
+  [Beat Bxx | Claims Cxxx,Cyyy]
+
+Where Bxx is the timeline beat number (B01, B02, …) and Cxxx are the claim IDs
+(C001, C002, …) that support the paragraph's factual content.
+
+If a paragraph is transitional/structural (section marker, disclaimer), use:
+  [Beat B00 | Claims C000]
+
+RULES:
+- Do NOT change the narrative structure, add new events, or introduce new named humans.
+- You MAY tighten wording, fix factual inaccuracies, and improve claim alignment.
+- Use the script_language provided for each claim where possible.
+- Maintain word count within the specified range.
+- Every trace tag must reference real beat and claim IDs from the lists provided."""
+
+FACT_TIGHTEN_USER = """Fact-tighten this draft script.
+
+Target word count: {target_words} (range: {min_words}–{max_words})
+
+Draft script:
+{draft_script}
+
+Timeline beats (for Beat IDs — B01, B02, etc.):
+{timeline_beats_json}
+
+Verified claims with IDs and script-safe language:
+{claims_with_ids}
+
+INSTRUCTIONS:
+1. Review each paragraph against the claims and beats.
+2. Where a claim has script_language, prefer using it verbatim or closely paraphrased.
+3. Append a trace tag [Beat Bxx | Claims Cxxx,Cyyy] to the end of every paragraph.
+4. Do NOT invent new facts, people, or events.
+5. Keep word count within {min_words}–{max_words}.
+
+Output the COMPLETE fact-tightened script with trace tags. Output ONLY the script."""
+
+# ---------------------------------------------------------------------------
+# HARD GUARDRAILS FEEDBACK (injected when validation fails)
+# ---------------------------------------------------------------------------
+
+HARD_GUARDRAILS_FEEDBACK = """⚠️ HARD GUARDRAIL VALIDATION FAILED — the outline/timeline must be revised.
+
+The following issues were detected by deterministic validators:
+{issues_text}
+
+You MUST fix these issues. The pipeline cannot proceed until all hard issues are resolved.
+Revise your output to address every issue listed above."""
+
+# ---------------------------------------------------------------------------
 # RETENTION PASS
 # ---------------------------------------------------------------------------
 
 RETENTION_PASS_SYSTEM = """You are a YouTube retention optimization specialist for documentary content. You analyze scripts for retention risk — moments where viewers are likely to click away — and strengthen them.
+
+SURGERY-ONLY MODE: You may ONLY rewrite, reorder, or tighten existing content.
+You are FORBIDDEN from:
+- Introducing ANY new named people not already in the script
+- Introducing ANY new historical events not already in the script
+- Adding new facts, anecdotes, or claims that weren't in the original
+- Exceeding the word count bounds
+
+You may ONLY:
+- Rewrite weak sentences using the same facts/people
+- Reorder sentences within a section for better flow
+- Tighten prose (remove filler, strengthen verbs)
+- Add re-hook questions using existing information
+- Strengthen transitions between existing sections
 
 Retention killers to watch for (in order of severity):
 1. ESSAY SECTIONS: Any block of 60+ words with no named human, no sensory detail,
@@ -536,7 +634,7 @@ Check:
 4. No unresolved open loops
 5. Stakes escalate (never plateau in Act 2)
 6. Closing returns to the opening human
-7. CTA is thematically connected
+7. Ending is strong and definitive — no CTA, no "next episode" tease, no "stay with us"
 8. Disclaimer is present
 9. No AI-sounding phrases
 10. Minimum 3 independent source domains
