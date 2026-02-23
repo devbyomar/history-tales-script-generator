@@ -140,7 +140,7 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             for event in app.stream(initial_state, stream_mode="updates"):
                 # ---- Cancellation check (between every node) ----
                 if cancel_event.is_set():
-                    raise _PipelineCancelled(run_id)
+                    return  # Exit silently — coroutine handles cleanup
 
                 for node_name, node_output in event.items():
                     last_state.update(node_output)
@@ -148,7 +148,7 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
 
                     # Check again after processing each node output
                     if cancel_event.is_set():
-                        raise _PipelineCancelled(run_id)
+                        return  # Exit silently
 
                     # Publish progress event
                     node_index = (
@@ -175,21 +175,22 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
                         )
                     )
 
-            # Reconstruct full final state from initial + all updates
-            final_state = {**initial_state, **last_state}
+            # Only set final_state if we weren't cancelled
+            if not cancel_event.is_set():
+                final_state = {**initial_state, **last_state}
 
         # Run in thread pool, but race against a cancellation watcher
         # so the coroutine exits immediately on cancel even if the thread
         # is blocked inside an LLM call.
         thread_future = loop.run_in_executor(None, _run_sync)
+        _cancelled = False
 
         async def _cancel_watcher():
             """Poll the cancel event from the async side."""
             while not cancel_event.is_set():
                 await asyncio.sleep(0.5)
-            # Signal detected — cancel the executor future
-            thread_future.cancel()
-            raise _PipelineCancelled(run_id)
+            # Signal detected — don't raise, just return so we handle it below
+            return "cancelled"
 
         watcher_task = asyncio.create_task(_cancel_watcher())
 
@@ -199,22 +200,26 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
                 [thread_future, watcher_task],
                 return_when=asyncio.FIRST_COMPLETED,
             )
-            # Cancel the loser
-            for task in pending:
-                task.cancel()
+            # Cancel the pending tasks (cleanup)
+            for t in pending:
+                t.cancel()
                 try:
-                    await task
+                    await t
                 except (asyncio.CancelledError, _PipelineCancelled):
                     pass
 
-            # Re-raise any exception from the completed tasks
-            for task in done:
-                if task.exception() is not None:
-                    raise task.exception()
-        except _PipelineCancelled:
-            raise
+            # Check if cancellation won the race
+            for t in done:
+                if t is watcher_task:
+                    _cancelled = True
+                elif t.exception() is not None:
+                    raise t.exception()
+
         except asyncio.CancelledError:
             cancel_event.set()
+            _cancelled = True
+
+        if _cancelled:
             raise _PipelineCancelled(run_id)
 
         # Update the run store with results
