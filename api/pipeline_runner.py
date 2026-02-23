@@ -96,6 +96,7 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             "sensitivity_level": params.get("sensitivity_level", "general audiences"),
             "nonlinear_open": params.get("nonlinear_open", True),
             "previous_format_tag": params.get("previous_format_tag"),
+            "requested_format_tag": params.get("requested_format_tag"),
             "target_words": target_words,
             "min_words": min_words,
             "max_words": max_words,

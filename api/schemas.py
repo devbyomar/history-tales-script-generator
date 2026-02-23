@@ -24,6 +24,7 @@ class GenerateRequest(BaseModel):
     sensitivity_level: str = Field("general audiences", description="Content sensitivity")
     nonlinear_open: bool = Field(True, description="Use nonlinear opening")
     previous_format_tag: Optional[str] = Field(None, description="Previous format for rotation")
+    requested_format_tag: Optional[str] = Field(None, description="Force a specific format tag")
 
 
 # ---------------------------------------------------------------------------
