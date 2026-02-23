@@ -21,6 +21,17 @@ def format_rotation_guard_node(state: dict[str, Any]) -> dict[str, Any]:
 
     candidates: list[TopicCandidate] = state.get("topic_candidates", [])
     previous_format = state.get("previous_format_tag")
+    requested_format = state.get("requested_format_tag")
+
+    # If a specific format was requested, force ALL candidates to use it
+    if requested_format:
+        logger.info("format_forced", requested=requested_format)
+        for candidate in candidates:
+            candidate.format_tag = requested_format
+        return {
+            "topic_candidates": candidates,
+            "current_node": "FormatRotationGuardNode",
+        }
 
     if not previous_format:
         logger.info("no_previous_format", msg="No rotation enforcement needed")

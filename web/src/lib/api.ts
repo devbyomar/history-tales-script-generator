@@ -17,6 +17,7 @@ export interface GenerateParams {
   sensitivity_level: string;
   nonlinear_open: boolean;
   previous_format_tag?: string;
+  requested_format_tag?: string;
 }
 
 export interface RunSummary {

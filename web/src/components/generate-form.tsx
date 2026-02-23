@@ -61,7 +61,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const [tone, setTone] = useState("cinematic-serious");
   const [sensitivity, setSensitivity] = useState("general audiences");
   const [nonlinearOpen, setNonlinearOpen] = useState(true);
-  const [previousFormat, setPreviousFormat] = useState("");
+  const [format, setFormat] = useState("");
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -74,7 +74,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
         tone,
         sensitivity_level: sensitivity,
         nonlinear_open: nonlinearOpen,
-        previous_format_tag: previousFormat || undefined,
+        requested_format_tag: format && format !== "none" ? format : undefined,
       });
     },
     [
@@ -85,7 +85,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       tone,
       sensitivity,
       nonlinearOpen,
-      previousFormat,
+      format,
       onSubmit,
     ]
   );
@@ -199,10 +199,10 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             </div>
           </div>
 
-          {/* Previous Format */}
+          {/* Format */}
           <div className="space-y-2">
-            <Label>Previous Format (for rotation)</Label>
-            <Select value={previousFormat} onValueChange={setPreviousFormat}>
+            <Label>Format</Label>
+            <Select value={format} onValueChange={setFormat}>
               <SelectTrigger>
                 <SelectValue placeholder="Auto (rotation)" />
               </SelectTrigger>
