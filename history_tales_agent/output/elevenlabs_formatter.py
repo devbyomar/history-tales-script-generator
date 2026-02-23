@@ -62,6 +62,25 @@ _TIMESTAMP_RE = re.compile(
     r"T-[\d:?+]+\s*(?:\([^)]*\))?\s*[—–.\s]*"
 )
 
+# Source attribution phrases — safety net for any "According to Wikipedia" etc.
+# Strips the attribution prefix while keeping the factual content.
+# e.g. "According to Wikipedia, Harris was..." → "Harris was..."
+# e.g. "According to Wikipedia's Juan Pujol García entry, ..." → "..."
+# e.g. "Wikipedia says ..." → "..."
+_SOURCE_ATTRIBUTION_RE = re.compile(
+    r"(?:According to|As (?:noted|documented|recorded|described) (?:by|in|on))"
+    r"\s+(?:Wikipedia(?:'s\s+[^,]+?)?|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:'s\s+[^,]+?)?)"
+    r"(?:\s+(?:article|entry|page|biography|source|account))?"
+    r"[,;]\s*",
+    re.IGNORECASE,
+)
+
+# Catch remaining "Wikipedia says/states/notes" patterns
+_WIKI_VERB_RE = re.compile(
+    r"Wikipedia\s+(?:says|states|notes|reports|indicates|mentions|records)\s+(?:that\s+)?",
+    re.IGNORECASE,
+)
+
 # ──────────────────────────────────────────────────────────────
 # 2.  EMOTIONAL DIRECTION — audio tag injection
 # ──────────────────────────────────────────────────────────────
@@ -407,6 +426,8 @@ def format_elevenlabs(script: str) -> str:
     text = _ONSCREEN_RE.sub("", text)
     text = _DISCLAIMER_RE.sub("", text)
     text = _TIMESTAMP_RE.sub("", text)
+    text = _SOURCE_ATTRIBUTION_RE.sub("", text)
+    text = _WIKI_VERB_RE.sub("", text)
 
     # ── Step 2: Normalise ──
     text = _normalise_for_tts(text)

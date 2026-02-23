@@ -94,6 +94,36 @@ class TestStripping:
         assert "T-00:00" not in result
         assert "T-?" not in result
 
+    def test_according_to_wikipedia_stripped(self):
+        text = "According to Wikipedia, Harris was an MI5 officer."
+        result = format_elevenlabs(text)
+        assert "According to Wikipedia" not in result
+        assert "Harris" in result
+
+    def test_according_to_wikipedia_biography_stripped(self):
+        text = "According to Wikipedia's Juan Pujol García biography, Pujol built a network."
+        result = format_elevenlabs(text)
+        assert "According to Wikipedia" not in result
+        assert "Pujol built a network" in result
+
+    def test_according_to_wikipedia_entry_stripped(self):
+        text = "According to Wikipedia's Juan Pujol García entry, he served as a double agent."
+        result = format_elevenlabs(text)
+        assert "According to Wikipedia" not in result
+        assert "he served as a double agent" in result
+
+    def test_wikipedia_says_stripped(self):
+        text = "Wikipedia says that the operation lasted 40 minutes."
+        result = format_elevenlabs(text)
+        assert "Wikipedia" not in result
+        assert "the operation lasted 40 minutes" in result
+
+    def test_wikipedia_states_stripped(self):
+        text = "Wikipedia states the team returned to Afghanistan."
+        result = format_elevenlabs(text)
+        assert "Wikipedia" not in result
+        assert "the team returned to Afghanistan" in result
+
 
 # ─── TTS Normalisation ──────────────────────────────────────
 
