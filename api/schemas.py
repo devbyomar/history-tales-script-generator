@@ -35,7 +35,7 @@ class RunSummary(BaseModel):
     """Summary of a completed pipeline run."""
 
     run_id: str
-    status: str  # "running" | "completed" | "failed"
+    status: str  # "running" | "completed" | "failed" | "cancelled"
     created_at: str
     completed_at: Optional[str] = None
 

@@ -20,6 +20,8 @@ class RunStore:
         self._runs: dict[str, RunDetail] = {}
         self._events: dict[str, list[NodeProgress]] = {}
         self._subscribers: dict[str, list[asyncio.Queue]] = {}
+        self._tasks: dict[str, asyncio.Task] = {}
+        self._cancelled: set[str] = set()
 
     def create_run(self, params: dict[str, Any]) -> str:
         """Create a new run entry and return its ID."""
@@ -88,6 +90,36 @@ class RunStore:
     def get_events(self, run_id: str) -> list[NodeProgress]:
         """Get all events for a run (for late-joining clients)."""
         return self._events.get(run_id, [])
+
+    # ------------------------------------------------------------------
+    # Cancellation helpers
+    # ------------------------------------------------------------------
+
+    def set_task(self, run_id: str, task: asyncio.Task) -> None:
+        """Store the asyncio Task handle for a run."""
+        self._tasks[run_id] = task
+
+    def cancel_run(self, run_id: str) -> bool:
+        """Mark a run as cancelled and cancel its asyncio Task.
+
+        Returns True if the run was successfully marked for cancellation.
+        """
+        run = self._runs.get(run_id)
+        if not run or run.status != "running":
+            return False
+
+        self._cancelled.add(run_id)
+
+        # Cancel the asyncio task if it exists
+        task = self._tasks.get(run_id)
+        if task and not task.done():
+            task.cancel()
+
+        return True
+
+    def is_cancelled(self, run_id: str) -> bool:
+        """Check whether a run has been cancelled."""
+        return run_id in self._cancelled
 
 
 # Singleton

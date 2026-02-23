@@ -14,6 +14,14 @@ from typing import Any
 from api.schemas import NodeProgress
 from api.store import run_store
 
+
+class _PipelineCancelled(Exception):
+    """Raised when a pipeline run is cancelled by the user."""
+
+    def __init__(self, run_id: str) -> None:
+        self.run_id = run_id
+        super().__init__(f"Run {run_id} cancelled by user")
+
 # Pipeline node order (matches graph.py edge definitions)
 PIPELINE_NODES = [
     "topic_discovery",
@@ -125,6 +133,10 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             nonlocal final_state
             last_state = {}
             for event in app.stream(initial_state, stream_mode="updates"):
+                # ---- Cancellation check ----
+                if run_store.is_cancelled(run_id):
+                    raise _PipelineCancelled(run_id)
+
                 for node_name, node_output in event.items():
                     last_state.update(node_output)
                     completed_nodes.add(node_name)
@@ -212,6 +224,42 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
                 node_index=16,
                 total_nodes=16,
                 message="Pipeline complete!",
+            )
+        )
+
+    except _PipelineCancelled:
+        # User-initiated cancellation — mark run cleanly
+        run_store.update_run(
+            run_id,
+            status="cancelled",
+            completed_at=datetime.utcnow().isoformat(),
+            errors=["Cancelled by user"],
+        )
+        await run_store.publish_event(
+            NodeProgress(
+                run_id=run_id,
+                node="__cancelled__",
+                status="failed",
+                node_index=0,
+                message="Pipeline cancelled by user",
+            )
+        )
+
+    except asyncio.CancelledError:
+        # asyncio task cancellation (from task.cancel())
+        run_store.update_run(
+            run_id,
+            status="cancelled",
+            completed_at=datetime.utcnow().isoformat(),
+            errors=["Cancelled by user"],
+        )
+        await run_store.publish_event(
+            NodeProgress(
+                run_id=run_id,
+                node="__cancelled__",
+                status="failed",
+                node_index=0,
+                message="Pipeline cancelled by user",
             )
         )
 

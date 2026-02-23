@@ -83,6 +83,8 @@ export function RunHistory({
                       ? "success"
                       : run.status === "failed"
                       ? "destructive"
+                      : run.status === "cancelled"
+                      ? "secondary"
                       : "default"
                   }
                   className="ml-2"

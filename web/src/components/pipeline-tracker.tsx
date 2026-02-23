@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   CheckCircle2,
   Circle,
@@ -22,6 +23,7 @@ import {
   Eye,
   FileCheck,
   Flag,
+  StopCircle,
 } from "lucide-react";
 import type { NodeProgress } from "@/lib/api";
 
@@ -86,12 +88,16 @@ interface PipelineTrackerProps {
   events: NodeProgress[];
   isRunning: boolean;
   isFailed: boolean;
+  isCancelled?: boolean;
+  onCancel?: () => void;
 }
 
 export function PipelineTracker({
   events,
   isRunning,
   isFailed,
+  isCancelled = false,
+  onCancel,
 }: PipelineTrackerProps) {
   const completedNodes = new Set(
     events
@@ -114,23 +120,40 @@ export function PipelineTracker({
             <span className="text-primary">🔄</span>
             Pipeline Progress
           </CardTitle>
-          <Badge
-            variant={
-              isFailed
-                ? "destructive"
+          <div className="flex items-center gap-2">
+            {isRunning && onCancel && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onCancel}
+                className="h-7 px-3 text-xs"
+              >
+                <StopCircle className="h-3.5 w-3.5 mr-1" />
+                Cancel
+              </Button>
+            )}
+            <Badge
+              variant={
+                isFailed
+                  ? "destructive"
+                  : isCancelled
+                  ? "secondary"
+                  : completedNodes.size === 16
+                  ? "success"
+                  : "default"
+              }
+            >
+              {isFailed
+                ? "Failed"
+                : isCancelled
+                ? "Cancelled"
                 : completedNodes.size === 16
-                ? "success"
-                : "default"
-            }
-          >
-            {isFailed
-              ? "Failed"
-              : completedNodes.size === 16
-              ? "Complete"
-              : isRunning
-              ? `${completedNodes.size}/16`
-              : "Idle"}
-          </Badge>
+                ? "Complete"
+                : isRunning
+                ? `${completedNodes.size}/16`
+                : "Idle"}
+            </Badge>
+          </div>
         </div>
         <Progress value={progress} className="mt-2" />
       </CardHeader>
@@ -165,7 +188,7 @@ export function PipelineTracker({
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   ) : isCurrent ? (
                     <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                  ) : isFailed && isPending ? (
+                  ) : (isFailed || isCancelled) && isPending ? (
                     <XCircle className="h-4 w-4 text-destructive/50" />
                   ) : (
                     <Circle className="h-4 w-4 text-muted-foreground/30" />
