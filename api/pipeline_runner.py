@@ -7,6 +7,7 @@ to emit real-time progress updates via the RunStore.
 from __future__ import annotations
 
 import asyncio
+import threading
 import traceback
 from datetime import datetime
 from typing import Any
@@ -128,18 +129,26 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
         # Capture the running event loop BEFORE entering the thread
         loop = asyncio.get_running_loop()
 
+        # Threading event for cross-thread cancellation signalling
+        cancel_event = threading.Event()
+        run_store.set_cancel_event(run_id, cancel_event)
+
         # Run the pipeline with streaming in a thread to avoid blocking the event loop
         def _run_sync():
             nonlocal final_state
             last_state = {}
             for event in app.stream(initial_state, stream_mode="updates"):
-                # ---- Cancellation check ----
-                if run_store.is_cancelled(run_id):
+                # ---- Cancellation check (between every node) ----
+                if cancel_event.is_set():
                     raise _PipelineCancelled(run_id)
 
                 for node_name, node_output in event.items():
                     last_state.update(node_output)
                     completed_nodes.add(node_name)
+
+                    # Check again after processing each node output
+                    if cancel_event.is_set():
+                        raise _PipelineCancelled(run_id)
 
                     # Publish progress event
                     node_index = (
@@ -169,8 +178,44 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             # Reconstruct full final state from initial + all updates
             final_state = {**initial_state, **last_state}
 
-        # Run in thread pool to avoid blocking
-        await loop.run_in_executor(None, _run_sync)
+        # Run in thread pool, but race against a cancellation watcher
+        # so the coroutine exits immediately on cancel even if the thread
+        # is blocked inside an LLM call.
+        thread_future = loop.run_in_executor(None, _run_sync)
+
+        async def _cancel_watcher():
+            """Poll the cancel event from the async side."""
+            while not cancel_event.is_set():
+                await asyncio.sleep(0.5)
+            # Signal detected — cancel the executor future
+            thread_future.cancel()
+            raise _PipelineCancelled(run_id)
+
+        watcher_task = asyncio.create_task(_cancel_watcher())
+
+        try:
+            # Wait for whichever finishes first: pipeline or cancellation
+            done, pending = await asyncio.wait(
+                [thread_future, watcher_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            # Cancel the loser
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except (asyncio.CancelledError, _PipelineCancelled):
+                    pass
+
+            # Re-raise any exception from the completed tasks
+            for task in done:
+                if task.exception() is not None:
+                    raise task.exception()
+        except _PipelineCancelled:
+            raise
+        except asyncio.CancelledError:
+            cancel_event.set()
+            raise _PipelineCancelled(run_id)
 
         # Update the run store with results
         chosen = final_state.get("chosen_topic")
