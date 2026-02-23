@@ -4,6 +4,10 @@
 .memory/
 .env
 
+# Reference transcripts (contain copyrighted content — keep local)
+references/*.json
+!references/example.json
+
 # Web frontend
 web/node_modules/
 web/.next/

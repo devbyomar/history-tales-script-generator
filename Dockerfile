@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r api/requirements.txt
 # Copy source code
 COPY history_tales_agent/ ./history_tales_agent/
 COPY api/ ./api/
+COPY references/ ./references/
 
 EXPOSE 8000
 

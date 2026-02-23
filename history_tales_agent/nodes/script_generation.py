@@ -20,6 +20,7 @@ from history_tales_agent.state import (
 )
 from history_tales_agent.utils.llm import call_llm
 from history_tales_agent.utils.feedback_memory import load_lessons_prompt
+from history_tales_agent.utils.reference_library import find_best_reference, build_reference_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -109,6 +110,24 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
     if lessons:
         user_prompt = lessons + "\n\n" + user_prompt
         logger.info("lessons_injected", node="ScriptGenerationNode", lessons_len=len(lessons))
+
+    # ── Inject best-matching reference transcript as style exemplar ──
+    if iteration_count == 0:  # only on the first attempt — retries focus on QC fixes
+        ref = find_best_reference(
+            duration_minutes=video_length,
+            tone=tone,
+            format_tag=format_tag,
+            era=chosen.era if chosen else None,
+            geo=chosen.geo if chosen else None,
+        )
+        if ref:
+            ref_prompt = build_reference_prompt(ref, target_duration_minutes=video_length)
+            user_prompt = ref_prompt + "\n\n" + user_prompt
+            logger.info(
+                "reference_injected",
+                node="ScriptGenerationNode",
+                title=ref.get("title", "?"),
+            )
 
     # ── On retry: inject QC feedback so the LLM knows what to fix ──
     if iteration_count > 0 and qc_report and qc_report.issues:
