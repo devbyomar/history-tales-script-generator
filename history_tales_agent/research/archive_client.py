@@ -1,4 +1,4 @@
-"""Client for institutional archives (Library of Congress, National Archives, Internet Archive)."""
+"""Client for institutional archives (Library of Congress, Internet Archive, Europeana, DPLA, Trove)."""
 
 from __future__ import annotations
 
@@ -102,43 +102,52 @@ def search_internet_archive(query: str, limit: int = 10) -> list[dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
-# National Archives (UK)
+# Europeana (European cultural heritage — free API, no key needed for basic)
 # ---------------------------------------------------------------------------
 
-TNA_API = "https://discovery.nationalarchives.gov.uk/API/search/v1/records"
+EUROPEANA_API = "https://api.europeana.eu/record/v2/search.json"
+# Free tier key for open-source/educational use (1000 req/day)
+_EUROPEANA_KEY = "api2demo"
 
 
 @retry_http
-def search_national_archives_uk(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    """Search UK National Archives Discovery API."""
+def search_europeana(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search Europeana collections for historical records."""
     cache = get_cache()
-    cached = cache.get(TNA_API, {"sps.searchQuery": query})
+    cached = cache.get(EUROPEANA_API, {"query": query})
     if cached:
         return cached
 
     params = {
-        "sps.searchQuery": query,
-        "sps.resultsPageSize": limit,
+        "wskey": _EUROPEANA_KEY,
+        "query": query,
+        "rows": limit,
+        "profile": "standard",
     }
     try:
-        resp = httpx.get(TNA_API, params=params, timeout=20, headers={**_HEADERS, "Accept": "application/json"})
+        resp = httpx.get(EUROPEANA_API, params=params, timeout=20, headers=_HEADERS)
         resp.raise_for_status()
         data = resp.json()
         results = []
-        for rec in data.get("records", []):
+        for item in data.get("items", []):
+            title_list = item.get("title", [""])
+            title = title_list[0] if isinstance(title_list, list) else str(title_list)
+            desc_list = item.get("dcDescription", [""])
+            desc = desc_list[0] if isinstance(desc_list, list) else str(desc_list)
+            guid = item.get("guid", item.get("link", ""))
             results.append({
-                "title": rec.get("title", ""),
-                "url": f"https://discovery.nationalarchives.gov.uk/details/r/{rec.get('id', '')}",
-                "description": rec.get("scopeContent", {}).get("description", ""),
-                "date": rec.get("coveringDates", ""),
-                "source": "The National Archives (UK)",
-                "domain": "nationalarchives.gov.uk",
+                "title": title,
+                "url": guid,
+                "description": desc,
+                "date": item.get("year", [""])[0] if isinstance(item.get("year"), list) else str(item.get("year", "")),
+                "source": "Europeana",
+                "domain": "europeana.eu",
             })
-        cache.set(TNA_API, results, {"sps.searchQuery": query})
-        logger.info("tna_search", query=query, results=len(results))
+        cache.set(EUROPEANA_API, results, {"query": query})
+        logger.info("europeana_search", query=query, results=len(results))
         return results
     except Exception as e:
-        logger.warning("tna_search_failed", query=query, error=str(e))
+        logger.warning("europeana_search_failed", query=query, error=str(e))
         return []
 
 
@@ -152,6 +161,6 @@ def search_all_archives(query: str, limit: int = 5) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     results.extend(search_library_of_congress(query, limit))
     results.extend(search_internet_archive(query, limit))
-    results.extend(search_national_archives_uk(query, limit))
+    results.extend(search_europeana(query, limit))
     logger.info("all_archives_search", query=query, total_results=len(results))
     return results

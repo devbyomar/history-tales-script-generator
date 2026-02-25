@@ -46,6 +46,7 @@ class SourceEntry(BaseModel):
 class Claim(BaseModel):
     """A single factual claim extracted from research."""
 
+    claim_id: str = ""  # C001, C002, …
     claim_text: str
     source_name: str
     source_url: str
@@ -53,6 +54,10 @@ class Claim(BaseModel):
     confidence: str = "Moderate"  # "High" | "Moderate" | "Contested"
     cross_checked: bool = False
     cross_check_notes: str = ""
+    date_anchor: str = ""  # e.g. "1944-06-06" or ""
+    named_entities: list[str] = Field(default_factory=list)
+    quote_candidate: bool = False
+    script_language: str = ""  # safe narration sentence from cross-check
 
 
 class TimelineBeat(BaseModel):
@@ -87,15 +92,25 @@ class EmotionalDriver(BaseModel):
     source_reference: str = ""
 
 
+class RehookPlan(BaseModel):
+    """A planned re-hook within a script section."""
+
+    approx_word_index: int = 0
+    purpose: str = ""
+    line_stub: str = ""
+
+
 class ScriptSection(BaseModel):
     """A section of the final script outline."""
 
     section_name: str
     description: str = ""
     target_word_count: int = 0
+    minute_range: str = ""  # e.g. "0:00–0:20"
     re_hooks: list[str] = Field(default_factory=list)
     open_loops: list[str] = Field(default_factory=list)
     key_beats: list[str] = Field(default_factory=list)
+    rehook_plan: list[RehookPlan] = Field(default_factory=list)
 
 
 class QCReport(BaseModel):
@@ -135,6 +150,14 @@ class AgentState(BaseModel):
     sensitivity_level: str = "general audiences"
     nonlinear_open: bool = True
     previous_format_tag: Optional[str] = None
+    requested_format_tag: Optional[str] = None
+
+    # ── Narrative lens / geo / mobility (optional expansions) ───────
+    narrative_lens: Optional[str | list[str]] = None
+    lens_strength: float = 0.6
+    geo_scope: Optional[str] = None
+    geo_anchor: Optional[str | list[str]] = None
+    mobility_mode: Optional[str] = None
 
     # ── Derived parameters ──────────────────────────────────────────────
     target_words: int = 0
@@ -166,12 +189,14 @@ class AgentState(BaseModel):
 
     # ── Script ──────────────────────────────────────────────────────────
     script_outline: list[ScriptSection] = Field(default_factory=list)
+    draft_script: str = ""  # Stage A output (before fact-tighten)
     final_script: str = ""
 
     # ── Quality ─────────────────────────────────────────────────────────
     qc_report: Optional[QCReport] = None
     emotional_intensity_score: float = 0.0
     sensory_density_score: float = 0.0
+    validation_issues: list[str] = Field(default_factory=list)  # from hard guardrails
 
     # ── Internal tracking ───────────────────────────────────────────────
     current_node: str = ""
@@ -200,6 +225,14 @@ class GraphState(TypedDict, total=False):
     sensitivity_level: str
     nonlinear_open: bool
     previous_format_tag: Optional[str]
+    requested_format_tag: Optional[str]
+
+    # Narrative lens / geo / mobility (optional expansions)
+    narrative_lens: Optional[str | list[str]]
+    lens_strength: float
+    geo_scope: Optional[str]
+    geo_anchor: Optional[str | list[str]]
+    mobility_mode: Optional[str]
 
     # Derived parameters
     target_words: int
@@ -231,12 +264,14 @@ class GraphState(TypedDict, total=False):
 
     # Script
     script_outline: list[ScriptSection]
+    draft_script: str
     final_script: str
 
     # Quality
     qc_report: Optional[QCReport]
     emotional_intensity_score: float
     sensory_density_score: float
+    validation_issues: list[str]
 
     # Internal tracking
     current_node: str

@@ -8,8 +8,10 @@ from history_tales_agent.nodes.claims_extraction import claims_extraction_node
 from history_tales_agent.nodes.cross_check import cross_check_node
 from history_tales_agent.nodes.emotional_extraction import emotional_extraction_node
 from history_tales_agent.nodes.emotional_intensity import emotional_intensity_node
+from history_tales_agent.nodes.fact_tighten import fact_tighten_node
 from history_tales_agent.nodes.finalize import finalize_node
 from history_tales_agent.nodes.format_rotation_guard import format_rotation_guard_node
+from history_tales_agent.nodes.hard_guardrails import hard_guardrails_node
 from history_tales_agent.nodes.outline import outline_node
 from history_tales_agent.nodes.quality_check import quality_check_node
 from history_tales_agent.nodes.research_fetch import research_fetch_node
@@ -53,20 +55,21 @@ def _qc_route(state: dict) -> str:
 
 
 def build_graph() -> StateGraph:
-    """Build and compile the 16-node LangGraph pipeline.
+    """Build and compile the 18-node LangGraph pipeline.
 
     Flow:
         TopicDiscovery → FormatRotationGuard → TopicScoring → ResearchFetch
         → SourceCredibility → ClaimsExtraction → CrossCheck → TimelineBuilder
-        → EmotionalExtraction → Outline → ScriptGeneration → RetentionPass
-        → EmotionalIntensity → SensoryDensity → QualityCheck
+        → EmotionalExtraction → Outline → HardGuardrails → ScriptGeneration
+        → FactTighten → RetentionPass → EmotionalIntensity → SensoryDensity
+        → QualityCheck
         ↳ (pass or max retries) → Finalize
         ↳ (fail + word count off) → ScriptGeneration (retry loop)
     """
     # Use TypedDict-based state for proper key-level merging across nodes
     workflow = StateGraph(GraphState)
 
-    # --- Add all 16 nodes ---
+    # --- Add all 18 nodes ---
     workflow.add_node("topic_discovery", topic_discovery_node)
     workflow.add_node("format_rotation_guard", format_rotation_guard_node)
     workflow.add_node("topic_scoring", topic_scoring_node)
@@ -77,7 +80,9 @@ def build_graph() -> StateGraph:
     workflow.add_node("timeline_builder", timeline_builder_node)
     workflow.add_node("emotional_extraction", emotional_extraction_node)
     workflow.add_node("outline", outline_node)
+    workflow.add_node("hard_guardrails", hard_guardrails_node)
     workflow.add_node("script_generation", script_generation_node)
+    workflow.add_node("fact_tighten", fact_tighten_node)
     workflow.add_node("retention_pass", retention_pass_node)
     workflow.add_node("emotional_intensity", emotional_intensity_node)
     workflow.add_node("sensory_density", sensory_density_node)
@@ -96,8 +101,10 @@ def build_graph() -> StateGraph:
     workflow.add_edge("cross_check", "timeline_builder")
     workflow.add_edge("timeline_builder", "emotional_extraction")
     workflow.add_edge("emotional_extraction", "outline")
-    workflow.add_edge("outline", "script_generation")
-    workflow.add_edge("script_generation", "retention_pass")
+    workflow.add_edge("outline", "hard_guardrails")
+    workflow.add_edge("hard_guardrails", "script_generation")
+    workflow.add_edge("script_generation", "fact_tighten")
+    workflow.add_edge("fact_tighten", "retention_pass")
     workflow.add_edge("retention_pass", "emotional_intensity")
     workflow.add_edge("emotional_intensity", "sensory_density")
     workflow.add_edge("sensory_density", "quality_check")
@@ -114,7 +121,7 @@ def build_graph() -> StateGraph:
 
     workflow.add_edge("finalize", END)
 
-    logger.info("graph_built", nodes=16)
+    logger.info("graph_built", nodes=18)
     return workflow
 
 

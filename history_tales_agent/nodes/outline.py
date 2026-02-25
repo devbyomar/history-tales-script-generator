@@ -6,8 +6,11 @@ import json
 from typing import Any
 
 from history_tales_agent.prompts.templates import OUTLINE_SYSTEM, OUTLINE_USER
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block, build_planning_metadata
 from history_tales_agent.state import (
     EmotionalDriver,
+    RehookPlan,
     ScriptSection,
     TimelineBeat,
     TopicCandidate,
@@ -66,6 +69,21 @@ def outline_node(state: dict[str, Any]) -> dict[str, Any]:
         key_claims=key_claims,
     )
 
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+        logger.info("lens_injected", node="OutlineNode", lenses=[l.lens_id for l in lenses])
+    if geo_block:
+        user_prompt += geo_block
+        logger.info("geo_injected", node="OutlineNode")
+
     # ── Inject lessons from previous runs ──
     lessons = load_lessons_prompt()
     if lessons:
@@ -83,13 +101,24 @@ def outline_node(state: dict[str, Any]) -> dict[str, Any]:
 
     sections = []
     for rs in raw_sections:
+        # Parse rehook_plan items
+        rehook_plan = []
+        for rp in rs.get("rehook_plan", []):
+            rehook_plan.append(RehookPlan(
+                approx_word_index=rp.get("approx_word_index", 0),
+                purpose=rp.get("purpose", ""),
+                line_stub=rp.get("line_stub", ""),
+            ))
+
         section = ScriptSection(
             section_name=rs.get("section_name", ""),
             description=rs.get("description", ""),
             target_word_count=rs.get("target_word_count", 0),
+            minute_range=rs.get("minute_range", ""),
             re_hooks=rs.get("re_hooks", []),
             open_loops=rs.get("open_loops", []),
             key_beats=rs.get("key_beats", []),
+            rehook_plan=rehook_plan,
         )
         sections.append(section)
 

@@ -1,4 +1,9 @@
-"""RetentionPassNode — analyzes and improves script for viewer retention."""
+"""RetentionPassNode — surgery-only retention improvement pass.
+
+SURGERY-ONLY: may NOT introduce new named entities or new events.
+Only rewrites/reordering using existing beats/claims. Must maintain word
+count within min/max.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +16,7 @@ from history_tales_agent.prompts.templates import (
 from history_tales_agent.utils.llm import call_llm
 from history_tales_agent.utils.feedback_memory import load_lessons_prompt
 from history_tales_agent.utils.logging import get_logger
+from history_tales_agent.validators import validate_retention_no_new_entities
 
 logger = get_logger(__name__)
 
@@ -77,6 +83,31 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
             output_wc=word_count,
             max_words=max_words,
             msg="Retention pass exceeded max_words — using original script",
+        )
+        revised_script = script
+        word_count = input_word_count
+
+    # Guard: if retention pass dropped below min_words, fall back to original
+    if word_count < min_words and input_word_count >= min_words:
+        logger.warning(
+            "retention_pass_under_limit",
+            input_wc=input_word_count,
+            output_wc=word_count,
+            min_words=min_words,
+            msg="Retention pass went below min_words — using original script",
+        )
+        revised_script = script
+        word_count = input_word_count
+
+    # Guard: surgery-only — no new named entities allowed
+    entity_issues = validate_retention_no_new_entities(script, revised_script)
+    if entity_issues:
+        for issue in entity_issues:
+            logger.warning("retention_new_entity", name=issue.message)
+        logger.warning(
+            "retention_pass_new_entities",
+            count=len(entity_issues),
+            msg="Retention pass introduced new entities — using original script",
         )
         revised_script = script
         word_count = input_word_count

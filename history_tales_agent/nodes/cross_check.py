@@ -35,7 +35,8 @@ def cross_check_node(state: dict[str, Any]) -> dict[str, Any]:
 
     # Batch claims for cross-checking
     claims_json = json.dumps(
-        [{"claim_text": c.claim_text, "source": c.source_name, "confidence": c.confidence}
+        [{"claim_id": c.claim_id, "claim_text": c.claim_text, "source": c.source_name,
+          "confidence": c.confidence}
          for c in claims[:30]],  # Cap at 30 for context window
         indent=2,
     )
@@ -50,21 +51,23 @@ def cross_check_node(state: dict[str, Any]) -> dict[str, Any]:
         logger.error("cross_check_failed", error=str(e))
         return {"current_node": "CrossCheckNode"}
 
-    # Update claims with cross-check results
-    checked_map = {c.get("claim_text", "")[:80]: c for c in checked}
+    # Build lookup by claim_id first, then fall back to claim_text prefix
+    checked_by_id = {c.get("claim_id", ""): c for c in checked if c.get("claim_id")}
+    checked_by_text = {c.get("claim_text", "")[:80]: c for c in checked}
     consensus_contested = []
 
     for claim in claims:
-        key = claim.claim_text[:80]
-        if key in checked_map:
-            cc = checked_map[key]
+        cc = checked_by_id.get(claim.claim_id) or checked_by_text.get(claim.claim_text[:80])
+        if cc:
             claim.cross_checked = True
             claim.confidence = cc.get("confidence_after_check", claim.confidence)
             claim.cross_check_notes = cc.get("conflicting_info", "")
+            claim.script_language = cc.get("script_language", "")
 
             if cc.get("conflicting_info"):
                 consensus_contested.append({
                     "claim": claim.claim_text,
+                    "claim_id": claim.claim_id,
                     "conflict": cc["conflicting_info"],
                     "treatment": cc.get("recommended_treatment", "Note disagreement"),
                 })

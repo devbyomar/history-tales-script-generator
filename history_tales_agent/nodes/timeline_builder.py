@@ -9,9 +9,15 @@ from history_tales_agent.prompts.templates import (
     TIMELINE_BUILDER_SYSTEM,
     TIMELINE_BUILDER_USER,
 )
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import Claim, TimelineBeat, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
 from history_tales_agent.utils.logging import get_logger
+from history_tales_agent.validators import (
+    validate_tension_escalation,
+    validate_twist_distribution,
+)
 
 logger = get_logger(__name__)
 
@@ -51,6 +57,19 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
         rehook_count=rehook_count,
     )
 
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+    if geo_block:
+        user_prompt += geo_block
+
     try:
         raw_beats = call_llm_json(TIMELINE_BUILDER_SYSTEM, user_prompt, tier="fast")
     except Exception as e:
@@ -75,7 +94,19 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("timeline_built", beats=len(beats), twists=sum(1 for b in beats if b.is_twist))
 
+    # ── Deterministic tension & twist validation ──
+    beats_dicts = [
+        {"tension_level": b.tension_level, "is_twist": b.is_twist} for b in beats
+    ]
+    tension_issues = validate_tension_escalation(beats_dicts)
+    twist_issues = validate_twist_distribution(beats_dicts)
+    validation_warnings = []
+    for issue in tension_issues + twist_issues:
+        validation_warnings.append(f"[{issue.code}] {issue.message}")
+        logger.warning("timeline_validation", code=issue.code, message=issue.message)
+
     return {
         "timeline_beats": beats,
+        "validation_issues": state.get("validation_issues", []) + validation_warnings,
         "current_node": "TimelineBuilderNode",
     }

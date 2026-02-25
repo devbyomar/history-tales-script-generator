@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from history_tales_agent.state import AgentState, Claim, QCReport, SourceEntry
+from history_tales_agent.output.elevenlabs_formatter import write_elevenlabs_script
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -111,6 +112,11 @@ def format_output(state: dict[str, Any], output_dir: str = "output") -> Path:
         "format_tag": state.get("format_tag"),
         "era_focus": state.get("era_focus"),
         "geo_focus": state.get("geo_focus"),
+        "narrative_lens": state.get("narrative_lens"),
+        "lens_strength": state.get("lens_strength"),
+        "geo_scope": state.get("geo_scope"),
+        "geo_anchor": state.get("geo_anchor"),
+        "mobility_mode": state.get("mobility_mode"),
         "emotional_intensity_score": state.get("emotional_intensity_score", 0),
         "sensory_density_score": state.get("sensory_density_score", 0),
         "source_count": len(sources),
@@ -122,5 +128,11 @@ def format_output(state: dict[str, Any], output_dir: str = "output") -> Path:
     meta_path = out / "metadata.json"
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     logger.info("wrote_metadata", path=str(meta_path))
+
+    # --- script_elevenlabs.txt ---
+    try:
+        write_elevenlabs_script(state, output_dir)
+    except Exception as e:
+        logger.warning("elevenlabs_format_failed", error=str(e))
 
     return out

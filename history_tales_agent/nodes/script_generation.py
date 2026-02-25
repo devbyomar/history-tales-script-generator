@@ -1,4 +1,7 @@
-"""ScriptGenerationNode — writes the complete documentary script."""
+"""ScriptGenerationNode — Stage A: writes the draft documentary script.
+
+Stage B (FactTightenNode) follows to add trace tags and tighten facts.
+"""
 
 from __future__ import annotations
 
@@ -8,8 +11,11 @@ from typing import Any
 from history_tales_agent.prompts.templates import (
     SCRIPT_GENERATION_SYSTEM,
     SCRIPT_GENERATION_USER,
+    HARD_GUARDRAILS_FEEDBACK,
     get_tone_instructions,
 )
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import (
     Claim,
     EmotionalDriver,
@@ -74,9 +80,16 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     verified = "\n".join(
-        f"- [{c.confidence}] {c.claim_text} (Source: {c.source_name})"
+        f"- [{c.claim_id}] [{c.confidence}] {c.claim_text} (Source: {c.source_name})"
         for c in claims if c.confidence in ("High", "Moderate")
     )[:5000]
+
+    # Build script-safe language lines from cross-checked claims
+    script_language_lines = "\n".join(
+        f"- [{c.claim_id}] {c.script_language}"
+        for c in claims
+        if c.script_language and c.confidence in ("High", "Moderate")
+    )[:3000] or "None available."
 
     contested_str = "\n".join(
         f"- {cc.get('claim', '')}: {cc.get('conflict', '')} → {cc.get('treatment', '')}"
@@ -100,16 +113,40 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         timeline_beats_json=timeline_json,
         emotional_drivers_json=emotional_json,
         verified_claims=verified,
+        script_language_lines=script_language_lines,
         consensus_contested=contested_str,
         rehook_interval=f"{rehook_interval[0]}–{rehook_interval[1]}",
         rehook_words=rehook_words,
     )
+
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+        logger.info("lens_injected", node="ScriptGenerationNode", lenses=[l.lens_id for l in lenses])
+    if geo_block:
+        user_prompt += geo_block
+        logger.info("geo_injected", node="ScriptGenerationNode")
 
     # ── Inject lessons from previous runs ──
     lessons = load_lessons_prompt()
     if lessons:
         user_prompt = lessons + "\n\n" + user_prompt
         logger.info("lessons_injected", node="ScriptGenerationNode", lessons_len=len(lessons))
+
+    # ── Inject hard-guardrail feedback so the LLM avoids known issues ──
+    validation_issues = state.get("validation_issues", [])
+    if validation_issues and iteration_count == 0:
+        issues_text = "\n".join(f"  • {issue}" for issue in validation_issues)
+        guardrail_feedback = HARD_GUARDRAILS_FEEDBACK.format(issues_text=issues_text)
+        user_prompt = guardrail_feedback + "\n\n" + user_prompt
+        logger.info("guardrail_feedback_injected", issues=len(validation_issues))
 
     # ── Inject best-matching reference transcript as style exemplar ──
     if iteration_count == 0:  # only on the first attempt — retries focus on QC fixes
@@ -206,6 +243,7 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             break
 
     return {
-        "final_script": script,
+        "draft_script": script,
+        "final_script": script,  # Also set final_script so downstream nodes work if fact_tighten is skipped
         "current_node": "ScriptGenerationNode",
     }
