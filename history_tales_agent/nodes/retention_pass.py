@@ -58,7 +58,7 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
         logger.info("lessons_injected", node="RetentionPassNode", lessons_len=len(lessons))
 
     try:
-        revised = call_llm(RETENTION_PASS_SYSTEM, user_prompt, temperature=0.6)
+        revised = call_llm(RETENTION_PASS_SYSTEM, user_prompt, temperature=0.6, tier="fast")
     except Exception as e:
         logger.error("retention_pass_failed", error=str(e))
         return {"current_node": "RetentionPassNode"}

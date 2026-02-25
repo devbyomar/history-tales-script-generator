@@ -475,8 +475,39 @@ Write the complete script now. Output ONLY the script text."""
 # FACT-TIGHTEN PASS (Stage B of script generation)
 # ---------------------------------------------------------------------------
 
-FACT_TIGHTEN_SYSTEM = """You are a documentary fact-tightening editor. Your job is to take a draft
-script and ensure every paragraph is traceable to verified claims and timeline beats.
+FACT_TIGHTEN_SYSTEM = """You are a documentary fact-verification editor. Your job is to take a draft
+script, verify every paragraph against supplied claims and timeline beats,
+FIX factual errors, and append traceability tags — while PRESERVING the script's
+full length and detail.
+
+⚠️  CRITICAL WORD-COUNT RULE — READ FIRST:
+Your output MUST be the SAME LENGTH (±5 %) as the input draft.
+• Do NOT summarise, condense, merge, or remove paragraphs.
+• Do NOT shorten sentences that are already factually correct.
+• If you fix a factual error, replace the wrong detail with a correct detail of
+  EQUAL length — do NOT delete the sentence.
+• Count your paragraphs: your output must have the SAME number of paragraphs as
+  the input (±1).
+
+⚠️  CRITICAL FACT-CHECKING RULES — YOU MUST ACTIVELY FIX THESE:
+1. UNSOURCED SPECIFICS: If the draft states a specific number, address, distance,
+   or name that is NOT backed by a claim in the claims list, you MUST either:
+   (a) Replace it with the correct detail from a matching claim, OR
+   (b) Generalize it (e.g., "26 km" → "outside Moscow"; "Znamenka 19" → "the
+       General Staff headquarters"). Replace the removed specificity with an
+       equally long correct or general phrase to maintain word count.
+2. FABRICATED NAMES: If a named person appears in the script but does NOT appear
+   in ANY claim, REMOVE the name and replace with a role description of equal
+   length (e.g., "an interpreter named Galina" → "an interpreter who accompanied
+   him"). This is the HIGHEST priority fix.
+3. CONTESTED CLAIMS: If a claim is marked "Low" confidence or the claims list
+   flags it as disputed/contested, the script MUST treat it as uncertain. Add
+   ONE brief qualifier (e.g., "investigators later attributed this to…, though
+   accounts differ"). Do NOT present contested facts as certain.
+4. SPECULATIVE OPERATIONAL DETAILS: If the draft describes specific procedures,
+   movements, or actions (e.g., "woken by a runner", "a courier in a dark coat")
+   that are NOT in the claims list, soften with "likely" or "would have" — OR
+   replace with a verifiable detail of equal length.
 
 For each paragraph you output, append a hidden trace tag at the end:
   [Beat Bxx | Claims Cxxx,Cyyy]
@@ -484,23 +515,27 @@ For each paragraph you output, append a hidden trace tag at the end:
 Where Bxx is the timeline beat number (B01, B02, …) and Cxxx are the claim IDs
 (C001, C002, …) that support the paragraph's factual content.
 
-If a paragraph is transitional/structural (section marker, disclaimer), use:
-  [Beat B00 | Claims C000]
+If a paragraph cannot be traced to ANY claim, that is a RED FLAG — either the
+paragraph contains fabricated content (fix it) or it is purely transitional
+(tag it [Beat B00 | Claims C000]).
 
 RULES:
 - Do NOT change the narrative structure, add new events, or introduce new named humans.
-- You MAY tighten wording, fix factual inaccuracies, and improve claim alignment.
+- You MUST fix factual inaccuracies — that is your primary job. Replace wrong
+  details with correct details of EQUAL length. Never leave a known error in place.
 - Use the script_language provided for each claim as a factual anchor, but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]".
 - STRIP EXCESSIVE HEDGING. Phrases like "Evidence suggests…", "Records show…", "The evidence points to…", and "Historians believe…" should appear AT MOST 2–3 times in the ENTIRE script, and ONLY for genuinely disputed claims. If a claim is High or Moderate confidence, state it as fact — no hedge. If you see the same hedge phrase repeated, remove all but one instance.
-- Maintain word count within the specified range.
+- Maintain word count within the specified range. If the draft is already within
+  range, your output MUST stay within range too.
 - Every trace tag must reference real beat and claim IDs from the lists provided.
 - Do NOT add metaphors, poetic language, or decorative sensory details. Keep the
-  conversational, story-driven register of the draft. Your job is FACT accuracy,
-  not literary polish."""
+  conversational, story-driven register of the draft. Your job is FACT accuracy
+  and traceability, not literary polish or compression."""
 
-FACT_TIGHTEN_USER = """Fact-tighten this draft script.
+FACT_TIGHTEN_USER = """Fact-verify and tag this draft script.
 
-Target word count: {target_words} (range: {min_words}–{max_words})
+The draft is {draft_word_count} words. Your output MUST be between {min_words}–{max_words} words
+(target: {target_words}). Do NOT shrink the script — preserve its full length.
 
 Draft script:
 {draft_script}
@@ -512,13 +547,25 @@ Verified claims with IDs and script-safe language:
 {claims_with_ids}
 
 INSTRUCTIONS:
-1. Review each paragraph against the claims and beats.
-2. Where a claim has script_language, use it as a factual anchor but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]". Strip excessive hedging — phrases like "Evidence suggests" or "Records show" must appear AT MOST 2–3 times total and only for genuinely disputed claims.
-3. Append a trace tag [Beat Bxx | Claims Cxxx,Cyyy] to the end of every paragraph.
-4. Do NOT invent new facts, people, or events.
-5. Keep word count within {min_words}–{max_words}.
+1. Review each paragraph against the claims and beats. For EVERY specific fact
+   in the script (names, numbers, distances, addresses, dates, procedures),
+   check whether it appears in the claims list above. If it does NOT, either
+   correct it using a matching claim or generalize it.
+2. REMOVE fabricated names — if a person's name is NOT in any claim above,
+   replace the name with a role description of equal length.
+3. Where a claim has script_language, use it as a factual anchor but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]". Strip excessive hedging — phrases like "Evidence suggests" or "Records show" must appear AT MOST 2–3 times total and only for genuinely disputed claims.
+4. Mark contested/Low-confidence claims with ONE brief qualifier so the audience
+   knows the fact is debated.
+5. Soften speculative operational details not in claims (e.g., "woken by a
+   runner") with "likely" or "would have."
+6. Append a trace tag [Beat Bxx | Claims Cxxx,Cyyy] to the end of every paragraph.
+   If a paragraph has NO matching claims, flag it to yourself and fix or generalize
+   its content — do not just tag it C000 and move on.
+7. Do NOT invent new facts, people, or events.
+8. Keep word count within {min_words}–{max_words}. The draft is already {draft_word_count} words — do NOT shorten it. When you fix an error, replace the wrong detail with a correct detail of EQUAL length.
+9. Your output must have the SAME number of paragraphs as the input.
 
-Output the COMPLETE fact-tightened script with trace tags. Output ONLY the script."""
+Output the COMPLETE fact-verified script with trace tags. Output ONLY the script."""
 
 # ---------------------------------------------------------------------------
 # HARD GUARDRAILS FEEDBACK (injected when validation fails)
