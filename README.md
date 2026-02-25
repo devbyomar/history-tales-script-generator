@@ -8,7 +8,7 @@ A production-ready LangGraph agent that autonomously generates high-retention, e
 - **Dual-Model Architecture**: Creative tier (GPT-5) for writing, fast tier (GPT-5.2) for analysis — configurable via env vars
 - **Evidence-Led Research**: Only credible, non-paywalled sources (Wikipedia API, National Archives, Library of Congress, etc.)
 - **Hard Guardrails**: Deterministic validation gates enforce entity provenance, word count, rehook cadence, tension escalation, and essay-block detection — no LLM hallucination can bypass these
-- **Fact-Tighten Pass**: Two-stage script generation — draft → fact-tighten with per-paragraph trace tags `[Beat Bxx | Claims Cxxx]`
+- **Fact-Tighten Pass**: Two-stage script generation — draft → active fact-checking (unsourced specifics, fabricated names, contested claims, speculative details) with per-paragraph trace tags `[Beat Bxx | Claims Cxxx]` and 85% word-count floor guardrail
 - **Retention Engineering**: Re-hooks every 60–120 seconds, escalating stakes, micro-payoff enforcement; surgery-only retention pass (no new entities or events)
 - **Emotional Authenticity**: Extracts doubt, miscalculation, moral tension, internal conflict
 - **Quality Assurance**: Emotional intensity meter, sensory density checks, cross-referencing, conditional QC→rewrite loop
@@ -16,6 +16,7 @@ A production-ready LangGraph agent that autonomously generates high-retention, e
 - **Length Control**: Precise word count targeting at 155 words/minute ±10%, with expansion retry loop
 - **Format Rotation**: Six narrative formats with rotation enforcement
 - **Sources & Claims Log**: Full citation chain with confidence ratings
+- **ElevenLabs TTS Output**: Auto-generates pure narration text with all structural labels, stage directions, and cross-cut markers stripped
 - **Anti-Fabrication**: Strict rules preventing fictional/composite characters across all prompts
 
 ## Quick Start
@@ -38,8 +39,8 @@ cp .env.example .env
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | ✅ | — | Your OpenAI API key |
-| `OPENAI_MODEL` | ❌ | `gpt-4o` | Creative tier model (script writing, outline, retention pass) |
-| `OPENAI_FAST_MODEL` | ❌ | — | Fast tier model for analytical nodes (scoring, extraction, QC). Falls back to `OPENAI_MODEL` if unset |
+| `OPENAI_MODEL` | ❌ | `gpt-5` | Creative tier model (outline, story arc design) |
+| `OPENAI_FAST_MODEL` | ❌ | — | Fast tier model for script writing and analytical nodes. Falls back to `OPENAI_MODEL` if unset |
 | `OPENAI_TEMPERATURE` | ❌ | `0.7` | Base temperature for LLM calls |
 | `MAX_REQUESTS_PER_MINUTE` | ❌ | `20` | Rate limiter ceiling |
 | `MAX_TOKENS_PER_MINUTE` | ❌ | `150000` | Token rate limit |
@@ -65,6 +66,20 @@ python -m history_tales_agent.main \
   --tone urgent
 ```
 
+Or with narrative lens and geographic controls:
+
+```bash
+python -m history_tales_agent.main \
+  --video-length 15 \
+  --era "Cold War" \
+  --lens "civilians,logistics" \
+  --lens-strength 0.7 \
+  --geo-scope region \
+  --geo-anchor "Tempelhof Airport" \
+  --mobility route_based \
+  --tone investigative
+```
+
 ### 4. Run with Python API
 
 ```python
@@ -75,6 +90,9 @@ result = run_agent(
     era_focus="World War II",
     geo_focus="Western Europe",
     tone="cinematic-serious",
+    narrative_lens="civilians",
+    lens_strength=0.6,
+    geo_scope="theater",
 )
 
 print(result["final_script"])
@@ -94,9 +112,9 @@ TopicDiscoveryNode          ← fast tier
   → EmotionalExtractionNode   ← fast tier
   → OutlineNode               ← creative tier + lessons injection (minute_range, rehook_plan)
   → HardGuardrailsNode        (no LLM — deterministic validation gate)
-  → ScriptGenerationNode      ← creative tier + lessons injection (Stage A: draft)
-  → FactTightenNode           ← creative tier (Stage B: trace tags + post-script validation)
-  → RetentionPassNode         ← creative tier + lessons injection (surgery-only: no new entities)
+  → ScriptGenerationNode      ← fast tier + lessons injection (Stage A: draft)
+  → FactTightenNode           ← fast tier (Stage B: trace tags + per-paragraph fact-checking)
+  → RetentionPassNode         ← fast tier + lessons injection (surgery-only: no new entities)
   → EmotionalIntensityNode    ← fast tier
   → SensoryDensityCheckNode   ← fast tier
   → QualityCheckNode          ← fast tier (loops back to ScriptGeneration if QC fails, max 2 retries)
@@ -107,8 +125,8 @@ TopicDiscoveryNode          ← fast tier
 
 | Tier | Env Var | Used By | Why |
 |------|---------|---------|-----|
-| **Creative** | `OPENAI_MODEL` | Outline, ScriptGeneration, RetentionPass | Deep, nuanced writing quality |
-| **Fast** | `OPENAI_FAST_MODEL` | TopicDiscovery, Scoring, Claims, CrossCheck, Timeline, Emotional, Sensory, QC | Structured JSON extraction — speed over prose |
+| **Creative** | `OPENAI_MODEL` | Outline | Deep, nuanced story-arc design |
+| **Fast** | `OPENAI_FAST_MODEL` | TopicDiscovery, Scoring, Claims, CrossCheck, Timeline, Emotional, ScriptGeneration, FactTighten, RetentionPass, Sensory, QC | Direct prose, structured JSON extraction — speed over literary flourish |
 
 If `OPENAI_FAST_MODEL` is not set, all nodes fall back to `OPENAI_MODEL`.
 
@@ -195,6 +213,11 @@ pytest tests/test_validators.py -v
 | `sensitivity_level` | ❌ | general audiences | Content sensitivity |
 | `nonlinear_open` | ❌ | True | Use nonlinear opening |
 | `previous_format_tag` | ❌ | None | For format rotation |
+| `narrative_lens` | ❌ | None | Narrative lens(es) — comma-separated (e.g. `civilians`, `medics,logistics`) |
+| `lens_strength` | ❌ | 0.6 | How strongly the lens biases storytelling (0.0–1.0) |
+| `geo_scope` | ❌ | None | Geographic scope (`single_city`, `region`, `country`, `theater`, `global`) |
+| `geo_anchor` | ❌ | None | Physical focal point for spatial cohesion |
+| `mobility_mode` | ❌ | None | Spatial narrative mode (`fixed_site`, `route_based`, `multi_site`, `theater_wide`) |
 
 ## Supported Tones
 
@@ -220,7 +243,8 @@ pytest tests/test_validators.py -v
 
 ```
 output/
-├── script.md              # Final documentary script
+├── script.md              # Final documentary script (with structural labels)
+├── script_elevenlabs.txt  # Pure narration text for ElevenLabs TTS
 ├── sources_claims_log.md  # Full citation chain
 ├── qc_report.md           # Quality check results
 └── metadata.json          # Run metadata
@@ -235,7 +259,7 @@ history_tales_agent/
 ├── config.py              # Configuration management
 ├── state.py               # Pydantic state schema
 ├── graph.py               # LangGraph workflow definition
-├── nodes/                 # All 16 pipeline nodes
+├── nodes/                 # All 18 pipeline nodes
 │   ├── __init__.py
 │   ├── topic_discovery.py
 │   ├── format_rotation_guard.py
@@ -247,7 +271,9 @@ history_tales_agent/
 │   ├── timeline_builder.py
 │   ├── emotional_extraction.py
 │   ├── outline.py
+│   ├── hard_guardrails.py
 │   ├── script_generation.py
+│   ├── fact_tighten.py
 │   ├── retention_pass.py
 │   ├── emotional_intensity.py
 │   ├── sensory_density.py
@@ -273,12 +299,13 @@ history_tales_agent/
 │   └── logging.py
 └── output/                # Output formatters
     ├── __init__.py
-    └── formatter.py
+    ├── formatter.py              # Markdown output formatter
+    └── elevenlabs_formatter.py   # ElevenLabs TTS text formatter
 ```
 
 ## Scaling Notes
 
-- **Dual-Model**: Use a fast model (GPT-5.2, GPT-4o-mini) for analytical nodes and a creative model (GPT-5, GPT-4o) for writing — balances speed and quality
+- **Dual-Model**: Use a fast model (GPT-5.2) for script writing and analytical nodes, and a creative model (GPT-5) for story-arc design — balances speed, prose quality, and cost
 - **Feedback Loop**: The more runs you do, the better the agent gets — feedback memory distills patterns automatically
 - **Batch Processing**: Wrap `run_agent()` in async loop for bulk generation
 - **Caching**: HTTP responses cached by default to `.cache/` — reduces API costs on reruns
@@ -289,7 +316,7 @@ history_tales_agent/
 
 ## Monetization Extensions
 
-- Add voice synthesis integration (ElevenLabs, Azure TTS)
+- ✅ **Voice synthesis integration**: ElevenLabs TTS formatter outputs pure narration text (`script_elevenlabs.txt`)
 - Add image/B-roll suggestion nodes for video production
 - Add thumbnail title generation node
 - Add SEO metadata generation (tags, description)
@@ -314,8 +341,8 @@ Open http://localhost:3000 — the dashboard connects to the API at http://local
 
 ### Features
 
-- **Generate Form**: Full parameter control (video length, era, geo, tone, sensitivity, format rotation)
-- **Live Pipeline Tracker**: Real-time 16-node progress with SSE streaming, tier badges (creative/fast), per-node data
+- **Generate Form**: Full parameter control (video length, era, geo, tone, sensitivity, format rotation, narrative lens, geo scope, mobility)
+- **Live Pipeline Tracker**: Real-time 18-node progress with SSE streaming, tier badges (creative/fast), per-node data
 - **Script Viewer**: Tabbed view — Script, Sources, QC Report, Stats — with markdown rendering
 - **Export**: Download script as `.md` or sources as JSON
 - **Run History**: Browse and reload past generation runs
@@ -330,6 +357,7 @@ Open http://localhost:3000 — the dashboard connects to the API at http://local
 | `GET` | `/runs/{id}/stream` | SSE stream of real-time node progress |
 | `GET` | `/runs` | List recent runs |
 | `GET` | `/runs/{id}` | Get full run details + script |
+| `POST` | `/runs/{id}/cancel` | Cancel a running pipeline |
 | `GET` | `/runs/{id}/export/script` | Download script as markdown |
 | `GET` | `/runs/{id}/export/sources` | Download sources as JSON |
 
@@ -356,8 +384,8 @@ flyctl launch   # Creates app from fly.toml
 
 # 3. Set secrets (one-time)
 flyctl secrets set OPENAI_API_KEY="sk-..."
-flyctl secrets set OPENAI_MODEL="gpt-4o"
-flyctl secrets set OPENAI_FAST_MODEL="gpt-4o-mini"
+flyctl secrets set OPENAI_MODEL="gpt-5"
+flyctl secrets set OPENAI_FAST_MODEL="gpt-5.2"
 flyctl secrets set CORS_ORIGINS="https://your-app.vercel.app,http://localhost:3000"
 
 # 4. Deploy

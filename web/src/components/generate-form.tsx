@@ -48,6 +48,23 @@ const FORMATS = [
   { value: "Hunt", label: "Hunt" },
 ];
 
+const GEO_SCOPES = [
+  { value: "", label: "Auto" },
+  { value: "single_city", label: "Single City" },
+  { value: "region", label: "Region" },
+  { value: "country", label: "Country" },
+  { value: "theater", label: "Theater" },
+  { value: "global", label: "Global" },
+];
+
+const MOBILITY_MODES = [
+  { value: "", label: "Auto" },
+  { value: "fixed_site", label: "Fixed Site" },
+  { value: "route_based", label: "Route Based" },
+  { value: "multi_site", label: "Multi-Site" },
+  { value: "theater_wide", label: "Theater Wide" },
+];
+
 interface GenerateFormProps {
   onSubmit: (params: GenerateParams) => void;
   isLoading: boolean;
@@ -62,6 +79,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const [sensitivity, setSensitivity] = useState("general audiences");
   const [nonlinearOpen, setNonlinearOpen] = useState(true);
   const [format, setFormat] = useState("");
+  const [lens, setLens] = useState("");
+  const [lensStrength, setLensStrength] = useState(0.6);
+  const [geoScope, setGeoScope] = useState("");
+  const [geoAnchor, setGeoAnchor] = useState("");
+  const [mobilityMode, setMobilityMode] = useState("");
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -75,6 +97,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
         sensitivity_level: sensitivity,
         nonlinear_open: nonlinearOpen,
         requested_format_tag: format && format !== "none" ? format : undefined,
+        narrative_lens: lens || undefined,
+        lens_strength: lens ? lensStrength : undefined,
+        geo_scope: geoScope || undefined,
+        geo_anchor: geoAnchor || undefined,
+        mobility_mode: mobilityMode || undefined,
       });
     },
     [
@@ -86,6 +113,11 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       sensitivity,
       nonlinearOpen,
       format,
+      lens,
+      lensStrength,
+      geoScope,
+      geoAnchor,
+      mobilityMode,
       onSubmit,
     ]
   );
@@ -227,6 +259,91 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             />
             <Label htmlFor="nonlinear">Use nonlinear opening</Label>
           </div>
+
+          {/* ── Advanced: Narrative Lens ── */}
+          <details className="space-y-3 rounded-lg border border-border/50 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+              Advanced Options
+            </summary>
+            <div className="space-y-4 pt-2">
+              {/* Narrative Lens */}
+              <div className="space-y-2">
+                <Label htmlFor="lens">Narrative Lens</Label>
+                <Input
+                  id="lens"
+                  placeholder="e.g., civilians, medics, logistics"
+                  value={lens}
+                  onChange={(e) => setLens(e.target.value)}
+                />
+              </div>
+
+              {/* Lens Strength */}
+              {lens && (
+                <div className="space-y-2">
+                  <Label htmlFor="lensStrength">
+                    Lens Strength{" "}
+                    <span className="text-muted-foreground font-normal">
+                      ({lensStrength.toFixed(1)})
+                    </span>
+                  </Label>
+                  <Input
+                    id="lensStrength"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    value={lensStrength}
+                    onChange={(e) => setLensStrength(Number(e.target.value))}
+                  />
+                </div>
+              )}
+
+              {/* Geo Scope & Mobility */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Geo Scope</Label>
+                  <Select value={geoScope} onValueChange={setGeoScope}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Auto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GEO_SCOPES.map((g) => (
+                        <SelectItem key={g.value || "auto"} value={g.value || "none"}>
+                          {g.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Mobility</Label>
+                  <Select value={mobilityMode} onValueChange={setMobilityMode}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Auto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOBILITY_MODES.map((m) => (
+                        <SelectItem key={m.value || "auto"} value={m.value || "none"}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Geo Anchor */}
+              <div className="space-y-2">
+                <Label htmlFor="geoAnchor">Geo Anchor</Label>
+                <Input
+                  id="geoAnchor"
+                  placeholder="e.g., Tempelhof Airport, Ludendorff Bridge"
+                  value={geoAnchor}
+                  onChange={(e) => setGeoAnchor(e.target.value)}
+                />
+              </div>
+            </div>
+          </details>
 
           {/* Submit */}
           <Button

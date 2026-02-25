@@ -173,7 +173,7 @@ export default function HomePage() {
               </h2>
               <p className="text-sm text-muted-foreground/70 max-w-md">
                 Configure your documentary parameters on the left and hit
-                Generate. Watch the 16-node AI pipeline work in real-time.
+                Generate. Watch the 18-node AI pipeline work in real-time.
               </p>
             </div>
           </div>

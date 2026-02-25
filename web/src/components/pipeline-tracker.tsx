@@ -38,7 +38,9 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   timeline_builder: <BookOpen className="h-4 w-4" />,
   emotional_extraction: <Brain className="h-4 w-4" />,
   outline: <PenTool className="h-4 w-4" />,
+  hard_guardrails: <Shield className="h-4 w-4" />,
   script_generation: <PenTool className="h-4 w-4" />,
+  fact_tighten: <FileCheck className="h-4 w-4" />,
   retention_pass: <Zap className="h-4 w-4" />,
   emotional_intensity: <Brain className="h-4 w-4" />,
   sensory_density: <Eye className="h-4 w-4" />,
@@ -57,8 +59,10 @@ const NODE_TIERS: Record<string, "fast" | "creative" | "none"> = {
   timeline_builder: "fast",
   emotional_extraction: "fast",
   outline: "creative",
-  script_generation: "creative",
-  retention_pass: "creative",
+  hard_guardrails: "none",
+  script_generation: "fast",
+  fact_tighten: "fast",
+  retention_pass: "fast",
   emotional_intensity: "fast",
   sensory_density: "fast",
   quality_check: "fast",
@@ -76,7 +80,9 @@ const ALL_NODES = [
   "timeline_builder",
   "emotional_extraction",
   "outline",
+  "hard_guardrails",
   "script_generation",
+  "fact_tighten",
   "retention_pass",
   "emotional_intensity",
   "sensory_density",
@@ -110,7 +116,7 @@ export function PipelineTracker({
   );
   const currentNode = lastEvent.length > 0 ? lastEvent[lastEvent.length - 1].node : null;
 
-  const progress = (completedNodes.size / 16) * 100;
+  const progress = (completedNodes.size / ALL_NODES.length) * 100;
 
   return (
     <Card>
@@ -138,7 +144,7 @@ export function PipelineTracker({
                   ? "destructive"
                   : isCancelled
                   ? "secondary"
-                  : completedNodes.size === 16
+                  : completedNodes.size === ALL_NODES.length
                   ? "success"
                   : "default"
               }
@@ -147,10 +153,10 @@ export function PipelineTracker({
                 ? "Failed"
                 : isCancelled
                 ? "Cancelled"
-                : completedNodes.size === 16
+                : completedNodes.size === ALL_NODES.length
                 ? "Complete"
                 : isRunning
-                ? `${completedNodes.size}/16`
+                ? `${completedNodes.size}/${ALL_NODES.length}`
                 : "Idle"}
             </Badge>
           </div>

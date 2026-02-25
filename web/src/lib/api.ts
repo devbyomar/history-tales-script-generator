@@ -18,6 +18,11 @@ export interface GenerateParams {
   nonlinear_open: boolean;
   previous_format_tag?: string;
   requested_format_tag?: string;
+  narrative_lens?: string;
+  lens_strength?: number;
+  geo_scope?: string;
+  geo_anchor?: string;
+  mobility_mode?: string;
 }
 
 export interface RunSummary {
