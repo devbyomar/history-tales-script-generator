@@ -34,9 +34,30 @@ _REHOOK_RE = re.compile(
     r"^Re-hook:\s*.+$", re.MULTILINE
 )
 
-# Cross-cut labels at the START of a paragraph  ("Cross-cut: …")
-# We keep the content after the label — the narrator should read the scene.
-_CROSSCUT_LABEL_RE = re.compile(r"^Cross-cut:\s*", re.MULTILINE)
+# Cross-cut labels at the START of a paragraph.
+# Matches several variants the LLM produces:
+#   "Cross-cut: …"  /  "Cross-cut one. …"  /  "Cross-cut fourteen, 02:15. …"
+#   "One more cross-cut, …"  /  "Define the countdown. …"
+# The label (and any trailing period/comma) is stripped; narration after it is kept.
+_CROSSCUT_LABEL_RE = re.compile(
+    r"^Cross-cut(?:\s+\w+)?[.:,]\s*",
+    re.MULTILINE,
+)
+
+# Standalone stage-direction lines that are NOT narration.
+# e.g. "Define the countdown. T-0 is 23:45, the moment Oko first reports…"
+# e.g. "Post-incident finding. Time: unspecified here, …"
+# These start with a short directive phrase followed by a period, then scene context.
+_STAGE_DIRECTION_RE = re.compile(
+    r"^(?:Define the countdown|Post-incident finding)\.\s*",
+    re.MULTILINE,
+)
+
+# Mid-sentence "one more cross-cut" phrasing
+_INLINE_CROSSCUT_RE = re.compile(
+    r"One more cross-cut,?\s*(?:narrow and )?(?:internal\.?\s*)?",
+    re.IGNORECASE,
+)
 
 # Pivot labels
 _PIVOT_LABEL_RE = re.compile(r"^Pivot:\s*", re.MULTILINE)
@@ -465,6 +486,8 @@ def format_elevenlabs(script: str) -> str:
     text = _MD_TITLE_RE.sub("", text)
     text = _REHOOK_RE.sub("", text)
     text = _CROSSCUT_LABEL_RE.sub("", text)
+    text = _INLINE_CROSSCUT_RE.sub("", text)
+    text = _STAGE_DIRECTION_RE.sub("", text)
     text = _PIVOT_LABEL_RE.sub("", text)
     text = _ONSCREEN_RE.sub("", text)
     text = _DISCLAIMER_RE.sub("", text)

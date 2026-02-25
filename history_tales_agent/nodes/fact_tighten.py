@@ -72,17 +72,20 @@ def fact_tighten_node(state: dict[str, Any]) -> dict[str, Any]:
         indent=2,
     )
 
+    draft_word_count = len(draft_script.split())
+
     user_prompt = FACT_TIGHTEN_USER.format(
         target_words=target_words,
         min_words=min_words,
         max_words=max_words,
         draft_script=draft_script,
+        draft_word_count=draft_word_count,
         timeline_beats_json=timeline_json,
         claims_with_ids=claims_with_ids,
     )
 
     try:
-        tightened = call_llm(FACT_TIGHTEN_SYSTEM, user_prompt, temperature=0.5)
+        tightened = call_llm(FACT_TIGHTEN_SYSTEM, user_prompt, temperature=0.5, tier="fast")
     except Exception as e:
         logger.error("fact_tighten_failed", error=str(e))
         # Fall back to the draft
@@ -94,6 +97,21 @@ def fact_tighten_node(state: dict[str, Any]) -> dict[str, Any]:
     # Strip trace tags for the final script (but keep the tagged version for audit)
     final_script = strip_trace_tags(tightened)
     word_count = len(final_script.split())
+
+    # ── Word-count floor: if the LLM destroyed the script, fall back ──
+    # Allow up to 15% shrinkage; anything more means the model summarised.
+    floor = int(draft_word_count * 0.85)
+    if word_count < floor:
+        loss_pct = round((1 - word_count / draft_word_count) * 100, 1)
+        logger.error(
+            "fact_tighten_word_loss",
+            draft_words=draft_word_count,
+            result_words=word_count,
+            loss_pct=loss_pct,
+            action="falling_back_to_draft",
+        )
+        final_script = draft_script
+        word_count = draft_word_count
 
     logger.info("fact_tighten_complete", word_count=word_count, tagged_len=len(tightened))
 

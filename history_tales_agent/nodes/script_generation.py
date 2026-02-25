@@ -188,7 +188,7 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         )
 
     try:
-        script = call_llm(system_prompt, user_prompt, temperature=0.75)
+        script = call_llm(system_prompt, user_prompt, temperature=0.75, tier="fast")
     except Exception as e:
         logger.error("script_generation_failed", error=str(e))
         return {
@@ -204,40 +204,66 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
     # expand the draft.  Up to 2 expansion attempts.
     # -----------------------------------------------------------------------
     MAX_EXPAND_ATTEMPTS = 2
+    pre_expand_script = script  # Save in case expansion overshoots
     for attempt in range(1, MAX_EXPAND_ATTEMPTS + 1):
         if word_count >= min_words:
             break
+
+        words_needed = target_words - word_count
         logger.warning(
             "script_under_target",
             word_count=word_count,
             min_words=min_words,
+            words_needed=words_needed,
             attempt=attempt,
         )
         expand_system = (
-            "You are an expert history documentary scriptwriter. "
-            "The draft below is too short. Your job is to EXPAND it — "
-            "add richer sensory detail, deepen character moments, add "
-            "historical context, and develop transitions — until the script "
-            "meets the target word count. Do NOT remove or summarise existing "
-            "content. Keep every section marker intact. "
-            "IMPORTANT: Do NOT invent fictional characters. Every named person "
-            "must be a real, historically documented individual."
+            "You are an expert history documentary scriptwriter performing a "
+            "SURGICAL expansion. You will add exactly the number of words "
+            "requested, spread proportionally across every section of the "
+            "script. Do NOT rewrite existing sentences — INSERT new ones "
+            "between them.\n\n"
+            "RULES:\n"
+            "1. Keep every existing sentence UNCHANGED — do not rephrase, "
+            "merge, or delete anything.\n"
+            "2. Keep every section marker (--- [SECTION] ---) intact.\n"
+            "3. Spread new material EVENLY across all sections — do not dump "
+            "all additions into one act.\n"
+            "4. Each new sentence must contain a concrete historical detail, "
+            "a REAL person's name, or a functional sensory cue.\n"
+            "5. Do NOT invent fictional characters. Every named person must "
+            "be historically documented.\n"
+            "6. Do NOT add filler, hedging, or meta-commentary.\n"
+            "7. Count your output carefully. Your FINAL word count must land "
+            f"between {min_words} and {max_words}."
         )
         expand_user = (
-            f"The script below is {word_count} words. "
-            f"It MUST be between {min_words} and {max_words} words "
-            f"(target: {target_words}).\n\n"
-            f"Expand it to reach AT LEAST {min_words} words. "
-            f"Add depth, not filler. Every added sentence must contain "
-            f"a concrete detail, a REAL historical person, or a sensory cue. "
-            f"Do NOT invent fictional characters.\n\n"
+            f"CURRENT word count: {word_count}\n"
+            f"TARGET word count: {target_words}\n"
+            f"ALLOWED range: {min_words}–{max_words}\n"
+            f"WORDS TO ADD: approximately {words_needed}\n\n"
+            f"Spread ~{words_needed} new words across the script below. "
+            f"Add 2–4 new sentences per section, each with a concrete "
+            f"historical detail. Do NOT remove or change existing text.\n\n"
             f"Output ONLY the complete expanded script.\n\n"
             f"{script}"
         )
         try:
-            script = call_llm(expand_system, expand_user, temperature=0.7)
+            script = call_llm(expand_system, expand_user, temperature=0.4, tier="fast")
             word_count = len(script.split())
             logger.info("script_expanded", word_count=word_count, attempt=attempt)
+            # If expansion overshot massively (>20% over max), fall back to
+            # the previous version to avoid drowning FactTighten.
+            if word_count > int(max_words * 1.2):
+                logger.warning(
+                    "expansion_overshot",
+                    word_count=word_count,
+                    max_words=max_words,
+                    action="reverting_to_pre_expansion",
+                )
+                script = pre_expand_script
+                word_count = len(script.split())
+                break
         except Exception as e:
             logger.error("script_expansion_failed", error=str(e), attempt=attempt)
             break
