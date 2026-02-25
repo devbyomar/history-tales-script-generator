@@ -150,6 +150,14 @@ class AgentState(BaseModel):
     sensitivity_level: str = "general audiences"
     nonlinear_open: bool = True
     previous_format_tag: Optional[str] = None
+    requested_format_tag: Optional[str] = None
+
+    # ── Narrative lens / geo / mobility (optional expansions) ───────
+    narrative_lens: Optional[str | list[str]] = None
+    lens_strength: float = 0.6
+    geo_scope: Optional[str] = None
+    geo_anchor: Optional[str | list[str]] = None
+    mobility_mode: Optional[str] = None
 
     # ── Derived parameters ──────────────────────────────────────────────
     target_words: int = 0
@@ -217,6 +225,14 @@ class GraphState(TypedDict, total=False):
     sensitivity_level: str
     nonlinear_open: bool
     previous_format_tag: Optional[str]
+    requested_format_tag: Optional[str]
+
+    # Narrative lens / geo / mobility (optional expansions)
+    narrative_lens: Optional[str | list[str]]
+    lens_strength: float
+    geo_scope: Optional[str]
+    geo_anchor: Optional[str | list[str]]
+    mobility_mode: Optional[str]
 
     # Derived parameters
     target_words: int

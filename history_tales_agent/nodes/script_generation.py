@@ -14,6 +14,8 @@ from history_tales_agent.prompts.templates import (
     HARD_GUARDRAILS_FEEDBACK,
     get_tone_instructions,
 )
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import (
     Claim,
     EmotionalDriver,
@@ -117,6 +119,21 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         rehook_words=rehook_words,
     )
 
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+        logger.info("lens_injected", node="ScriptGenerationNode", lenses=[l.lens_id for l in lenses])
+    if geo_block:
+        user_prompt += geo_block
+        logger.info("geo_injected", node="ScriptGenerationNode")
+
     # ── Inject lessons from previous runs ──
     lessons = load_lessons_prompt()
     if lessons:
@@ -170,76 +187,22 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             issues=len(qc_report.issues),
         )
 
-    # -----------------------------------------------------------------------
-    # Chunked generation: for longer scripts (>6000 words target) we split
-    # the outline into batches of sections and generate each batch separately
-    # to stay within the LLM's output-token ceiling (~16 384 tokens ≈ 12 000
-    # words).  Shorter scripts are generated in a single call as before.
-    # -----------------------------------------------------------------------
-    CHUNK_WORD_CEILING = 6000  # max words we trust a single LLM call to produce
-
-    if target_words <= CHUNK_WORD_CEILING:
-        # --- Single-shot generation (short/medium videos) -----------------
-        script = _generate_single_shot(
-            system_prompt, user_prompt, target_words, min_words, max_words
-        )
-    else:
-        # --- Chunked generation (long videos 30+ min) ---------------------
-        script = _generate_chunked(
-            system_prompt=system_prompt,
-            user_prompt_base=user_prompt,
-            outline=outline,
-            target_words=target_words,
-            min_words=min_words,
-            max_words=max_words,
-        )
-
-    if script is None:
-        return {
-            "errors": state.get("errors", []) + [
-                "ScriptGenerationNode: All generation attempts returned empty/near-empty"
-            ],
-            "current_node": "ScriptGenerationNode",
-        }
-
-    return {
-        "draft_script": script,
-        "final_script": script,
-        "current_node": "ScriptGenerationNode",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _generate_single_shot(
-    system_prompt: str,
-    user_prompt: str,
-    target_words: int,
-    min_words: int,
-    max_words: int,
-) -> str | None:
-    """Generate the full script in one LLM call with expansion retries."""
     try:
         script = call_llm(system_prompt, user_prompt, temperature=0.75)
     except Exception as e:
         logger.error("script_generation_failed", error=str(e))
-        return None
+        return {
+            "errors": state.get("errors", []) + [f"ScriptGenerationNode: {str(e)}"],
+            "current_node": "ScriptGenerationNode",
+        }
 
     word_count = len(script.split())
     logger.info("script_generated", word_count=word_count, target=target_words)
 
-    if word_count < 100:
-        logger.error(
-            "script_generation_empty",
-            word_count=word_count,
-            msg="LLM returned empty/near-empty script",
-        )
-        return None
-
-    # Expansion retries — only for single-shot mode
+    # -----------------------------------------------------------------------
+    # Retry loop: if word count is significantly below target, ask the LLM to
+    # expand the draft.  Up to 2 expansion attempts.
+    # -----------------------------------------------------------------------
     MAX_EXPAND_ATTEMPTS = 2
     for attempt in range(1, MAX_EXPAND_ATTEMPTS + 1):
         if word_count >= min_words:
@@ -272,173 +235,15 @@ def _generate_single_shot(
             f"{script}"
         )
         try:
-            expanded = call_llm(expand_system, expand_user, temperature=0.7)
-            expanded_wc = len(expanded.split())
-            logger.info("script_expanded", word_count=expanded_wc, attempt=attempt)
-            if expanded_wc > word_count:
-                script = expanded
-                word_count = expanded_wc
-            else:
-                logger.warning(
-                    "expansion_not_longer",
-                    input_wc=word_count,
-                    output_wc=expanded_wc,
-                    attempt=attempt,
-                    msg="Expansion returned fewer/equal words — keeping previous draft",
-                )
-                break
+            script = call_llm(expand_system, expand_user, temperature=0.7)
+            word_count = len(script.split())
+            logger.info("script_expanded", word_count=word_count, attempt=attempt)
         except Exception as e:
             logger.error("script_expansion_failed", error=str(e), attempt=attempt)
             break
 
-    return script
-
-
-def _generate_chunked(
-    system_prompt: str,
-    user_prompt_base: str,
-    outline: list,
-    target_words: int,
-    min_words: int,
-    max_words: int,
-) -> str | None:
-    """Generate the script in chunks of sections, then stitch together.
-
-    Splits the outline into batches where each batch targets ≤5 000 words,
-    keeping the LLM well within its output-token ceiling.
-    """
-    BATCH_WORD_TARGET = 5000
-
-    # Build batches of sections
-    batches: list[list[dict]] = []
-    current_batch: list[dict] = []
-    current_words = 0
-
-    sections_data = [
-        {
-            "section": s.section_name,
-            "description": s.description,
-            "target_words": s.target_word_count,
-            "re_hooks": s.re_hooks,
-            "key_beats": s.key_beats,
-        }
-        for s in outline
-    ]
-
-    for sec in sections_data:
-        if current_words + sec["target_words"] > BATCH_WORD_TARGET and current_batch:
-            batches.append(current_batch)
-            current_batch = []
-            current_words = 0
-        current_batch.append(sec)
-        current_words += sec["target_words"]
-
-    if current_batch:
-        batches.append(current_batch)
-
-    logger.info(
-        "chunked_generation_plan",
-        total_sections=len(sections_data),
-        batches=len(batches),
-        batch_sizes=[sum(s["target_words"] for s in b) for b in batches],
-    )
-
-    # Generate each batch
-    script_parts: list[str] = []
-    total_words = 0
-    previous_ending = ""  # Last ~200 words of previous chunk for continuity
-
-    for batch_idx, batch in enumerate(batches):
-        batch_target = sum(s["target_words"] for s in batch)
-        batch_min = int(batch_target * 0.9)
-        batch_max = int(batch_target * 1.1)
-        batch_sections_json = json.dumps(batch, indent=2)
-
-        section_names = [s["section"] for s in batch]
-        is_first = batch_idx == 0
-        is_last = batch_idx == len(batches) - 1
-
-        continuity_context = ""
-        if previous_ending:
-            continuity_context = (
-                f"\n\nCONTINUITY — the previous chunk ended with:\n"
-                f'"""\n{previous_ending}\n"""\n'
-                f"Continue seamlessly from where this left off. "
-                f"Do NOT repeat content already written. "
-                f"Do NOT write a new title or opening.\n"
-            )
-
-        chunk_instructions = (
-            f"{'Write' if is_first else 'Continue writing'} the documentary script.\n"
-            f"This is chunk {batch_idx + 1} of {len(batches)}.\n"
-            f"{'Start with the title and opening.' if is_first else 'Continue from the previous chunk.'}\n"
-            f"Write ONLY these sections: {', '.join(section_names)}\n"
-            f"Target for this chunk: {batch_target} words "
-            f"(STRICT: between {batch_min} and {batch_max})\n\n"
-            f"Sections for this chunk:\n{batch_sections_json}\n"
-            f"{continuity_context}\n\n"
-            f"{'Include the closing disclaimer at the end.' if is_last else 'Do NOT include a disclaimer or final sign-off — more sections follow.'}\n\n"
-            f"FULL CONTEXT (for reference — do NOT rewrite earlier sections):\n"
-            f"{user_prompt_base}\n\n"
-            f"Output ONLY the script text for the sections listed above."
-        )
-
-        try:
-            chunk = call_llm(system_prompt, chunk_instructions, temperature=0.75)
-        except Exception as e:
-            logger.error(
-                "chunk_generation_failed",
-                batch=batch_idx + 1,
-                sections=section_names,
-                error=str(e),
-            )
-            # If first chunk fails, we can't continue
-            if is_first:
-                return None
-            # Otherwise, log and stop — return what we have
-            logger.warning(
-                "chunk_generation_partial",
-                completed_batches=batch_idx,
-                total_batches=len(batches),
-            )
-            break
-
-        chunk_wc = len(chunk.split())
-        logger.info(
-            "chunk_generated",
-            batch=batch_idx + 1,
-            sections=section_names,
-            word_count=chunk_wc,
-            target=batch_target,
-        )
-
-        if chunk_wc < 50:
-            logger.error(
-                "chunk_empty",
-                batch=batch_idx + 1,
-                word_count=chunk_wc,
-            )
-            if is_first:
-                return None
-            break
-
-        script_parts.append(chunk)
-        total_words += chunk_wc
-
-        # Save ending for continuity
-        words = chunk.split()
-        previous_ending = " ".join(words[-200:]) if len(words) > 200 else chunk
-
-    if not script_parts:
-        return None
-
-    script = "\n\n".join(script_parts)
-    word_count = len(script.split())
-    logger.info(
-        "chunked_generation_complete",
-        total_words=word_count,
-        target=target_words,
-        chunks_used=len(script_parts),
-    )
-
-    return script
+    return {
+        "draft_script": script,
+        "final_script": script,  # Also set final_script so downstream nodes work if fact_tighten is skipped
+        "current_node": "ScriptGenerationNode",
+    }

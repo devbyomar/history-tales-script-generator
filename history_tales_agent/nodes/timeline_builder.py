@@ -9,6 +9,8 @@ from history_tales_agent.prompts.templates import (
     TIMELINE_BUILDER_SYSTEM,
     TIMELINE_BUILDER_USER,
 )
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import Claim, TimelineBeat, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
 from history_tales_agent.utils.logging import get_logger
@@ -54,6 +56,19 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
         verified_claims=verified_claims,
         rehook_count=rehook_count,
     )
+
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+    if geo_block:
+        user_prompt += geo_block
 
     try:
         raw_beats = call_llm_json(TIMELINE_BUILDER_SYSTEM, user_prompt, tier="fast")

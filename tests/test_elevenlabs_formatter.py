@@ -10,6 +10,7 @@ from history_tales_agent.output.elevenlabs_formatter import (
     _apply_emphasis,
     _apply_pacing,
     _classify_sentence,
+    _deduplicate_hedges,
     _extract_first_sentence,
     _normalise_for_tts,
     _treat_dialogue,
@@ -123,6 +124,72 @@ class TestStripping:
         result = format_elevenlabs(text)
         assert "Wikipedia" not in result
         assert "the team returned to Afghanistan" in result
+
+
+# ─── Hedge Deduplication ─────────────────────────────────────
+
+
+class TestHedgeDeduplication:
+    """Verify that excessive hedge phrases are stripped."""
+
+    def test_first_two_hedges_kept(self):
+        text = (
+            "Evidence suggests Potiorek imposed emergency measures. "
+            "Records show the parliament was dissolved."
+        )
+        result = _deduplicate_hedges(text)
+        assert "Evidence suggests" in result
+        assert "Records show" in result
+
+    def test_third_hedge_stripped(self):
+        text = (
+            "Evidence suggests Potiorek imposed emergency measures. "
+            "Records show the parliament was dissolved. "
+            "The evidence suggests the driver was not informed."
+        )
+        result = _deduplicate_hedges(text)
+        # First two kept
+        assert "Evidence suggests" in result
+        assert "Records show" in result
+        # Third stripped — but the factual content remains (capitalised)
+        assert "driver was not informed" in result
+        # Count total hedge occurrences — should be at most 2
+        import re
+        count = len(re.findall(
+            r"(?:evidence suggests|records show|records indicate|evidence points? to)",
+            result,
+            re.IGNORECASE,
+        ))
+        assert count <= 2
+
+    def test_many_hedges_reduced(self):
+        sentences = [
+            "Evidence suggests Potiorek acted.",
+            "The evidence suggests the plan failed.",
+            "Records show the route changed.",
+            "The evidence points to a conspiracy.",
+            "Records indicate six attackers.",
+        ]
+        text = " ".join(sentences)
+        result = _deduplicate_hedges(text)
+        import re
+        count = len(re.findall(
+            r"(?:evidence suggests|records show|records indicate|evidence points? to)",
+            result,
+            re.IGNORECASE,
+        ))
+        assert count <= 2
+        # All factual content preserved (may be capitalised after hedge removal)
+        assert "Potiorek acted" in result
+        assert "plan failed" in result
+        assert "route changed" in result
+        assert "conspiracy" in result
+        assert "attackers" in result
+
+    def test_no_hedges_unchanged(self):
+        text = "Potiorek imposed emergency measures in 1913."
+        result = _deduplicate_hedges(text)
+        assert result == text
 
 
 # ─── TTS Normalisation ──────────────────────────────────────

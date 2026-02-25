@@ -45,7 +45,7 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     user_prompt = QC_USER.format(
-        script=script[:12000],
+        script=script[:60000],
         word_count=word_count,
         target_words=target_words,
         min_words=min_words,

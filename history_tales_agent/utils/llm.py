@@ -75,6 +75,7 @@ def get_llm(config: AppConfig | None = None, tier: ModelTier = "creative") -> Ch
                 api_key=cfg.openai_api_key,
                 max_retries=2,
                 max_tokens=16384,
+                timeout=300,
             )
             logger.info("llm_init", tier="fast", model=cfg.openai_fast_model)
         return _llm_fast
@@ -87,6 +88,7 @@ def get_llm(config: AppConfig | None = None, tier: ModelTier = "creative") -> Ch
             api_key=cfg.openai_api_key,
             max_retries=2,
             max_tokens=16384,
+            timeout=300,
         )
         logger.info("llm_init", tier="creative", model=cfg.openai_model)
     return _llm_creative

@@ -22,7 +22,7 @@ def emotional_intensity_node(state: dict[str, Any]) -> dict[str, Any]:
     if not script:
         return {"current_node": "EmotionalIntensityMeterNode"}
 
-    user_prompt = EMOTIONAL_INTENSITY_USER.format(script=script[:12000])
+    user_prompt = EMOTIONAL_INTENSITY_USER.format(script=script[:60000])
 
     try:
         result = call_llm_json(EMOTIONAL_INTENSITY_SYSTEM, user_prompt, tier="fast")

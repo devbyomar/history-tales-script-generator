@@ -128,7 +128,7 @@ CROSS_CHECK_SYSTEM = """You are a historical cross-referencing specialist. You c
 When sources conflict, you must:
 - Note both versions
 - Indicate which has stronger evidentiary basis
-- Recommend hedging language like "Historians disagree…" or "Evidence suggests…"
+- For CONTESTED claims only, recommend hedging — but vary the phrasing (never repeat the same hedge phrase twice)
 - NEVER name the source (e.g. NEVER write "According to Wikipedia" or "According to [any source name]")
 - Never silently pick one version"""
 
@@ -148,7 +148,7 @@ For each claim, return:
 - "supporting_sources": number of sources that support this
 - "conflicting_info": any conflicting information found (empty string if none)
 - "recommended_treatment": how to handle this in the script
-- "script_language": a single safe, defensible sentence that could be used verbatim in narration to convey this claim. Use narrator-native hedging like "Evidence suggests…", "Historians believe…", "Records show…", or "The evidence points to…" where confidence is Moderate or Contested. NEVER name the source (e.g. NEVER write "According to Wikipedia" or "According to [any source name]"). The sentence must sound like a confident narrator, not a citation.
+- "script_language": a single safe, defensible sentence that could be used verbatim in narration to convey this claim. For HIGH and MODERATE confidence: state the fact directly and confidently — NO hedging (e.g. "Potiorek imposed emergency measures in Bosnia in 1913."). For CONTESTED confidence ONLY: use ONE brief hedge phrase — vary your choice across claims (e.g. "Historians disagree on…", "The exact details remain debated, but…", "Accounts differ on…"). NEVER use the same hedge phrase for more than one claim. NEVER name the source (e.g. NEVER write "According to Wikipedia" or "According to [any source name]"). The sentence must sound like a confident narrator, not a citation.
 
 Return a JSON array. Return ONLY the JSON array."""
 
@@ -450,7 +450,7 @@ REQUIREMENTS:
 3. Re-hook every {rehook_interval} seconds (approximately every {rehook_words} words). Re-hooks MUST tease upcoming events or consequences — NOT ask rhetorical/philosophical questions.
 4. Every open loop must resolve within 2 segments or explicitly escalate
 5. Stakes must escalate through Act 2 — never plateau
-6. Where evidence is contested, use hedging like "Historians disagree…", "Evidence suggests…", or "Records indicate…" — NEVER name the source (NEVER write "According to Wikipedia", "According to [any source]", or any similar attribution). The narrator speaks with authority; sources stay invisible.
+6. State facts CONFIDENTLY. The narrator is the authority. Only hedge when sources genuinely CONFLICT — and even then, use hedging ONCE per disputed point, vary the phrasing, and move on. NEVER repeat phrases like "Evidence suggests…", "Records show…", or "Historians believe…" more than ONCE in the entire script. If a fact is well-documented, state it plainly. NEVER name the source (NEVER write "According to Wikipedia", "According to [any source]", or any similar attribution). The narrator speaks with authority; sources stay invisible.
 7. Close by returning to the opening human
 8. End with a strong, definitive final line — NO CTA, NO "next episode" tease, NO "stay with us." The story closes with finality and weight.
 9. Use the format structure ({format_tag}) to drive pacing
@@ -491,6 +491,7 @@ RULES:
 - Do NOT change the narrative structure, add new events, or introduce new named humans.
 - You MAY tighten wording, fix factual inaccuracies, and improve claim alignment.
 - Use the script_language provided for each claim as a factual anchor, but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]".
+- STRIP EXCESSIVE HEDGING. Phrases like "Evidence suggests…", "Records show…", "The evidence points to…", and "Historians believe…" should appear AT MOST 2–3 times in the ENTIRE script, and ONLY for genuinely disputed claims. If a claim is High or Moderate confidence, state it as fact — no hedge. If you see the same hedge phrase repeated, remove all but one instance.
 - Maintain word count within the specified range.
 - Every trace tag must reference real beat and claim IDs from the lists provided.
 - Do NOT add metaphors, poetic language, or decorative sensory details. Keep the
@@ -512,7 +513,7 @@ Verified claims with IDs and script-safe language:
 
 INSTRUCTIONS:
 1. Review each paragraph against the claims and beats.
-2. Where a claim has script_language, use it as a factual anchor but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]".
+2. Where a claim has script_language, use it as a factual anchor but weave it naturally into narration. NEVER name sources — no "According to Wikipedia" or "According to [source]". Strip excessive hedging — phrases like "Evidence suggests" or "Records show" must appear AT MOST 2–3 times total and only for genuinely disputed claims.
 3. Append a trace tag [Beat Bxx | Claims Cxxx,Cyyy] to the end of every paragraph.
 4. Do NOT invent new facts, people, or events.
 5. Keep word count within {min_words}–{max_words}.
@@ -590,6 +591,11 @@ Retention killers to watch for (in order of severity):
 14. NO NEW INFORMATION: Any stretch of 2+ minutes where the listener doesn't learn
     anything new (no new facts, characters, complications, or consequences). The
     audience came to LEARN something — if nothing new happens, they leave.
+15. HEDGE SPAM: Repetitive hedging phrases like "Evidence suggests…", "Records show…",
+    "The evidence points to…", or "Historians believe…" appearing more than 2–3 times
+    in the entire script. The narrator is the authority — state facts confidently.
+    Hedge ONLY for genuinely disputed claims, and NEVER repeat the same hedge phrase.
+    FIX: Remove the hedge and state the fact directly, unless the claim is truly contested.
 
 When you find essay-mode sections, do NOT just tighten the prose. Restructure: move
 the insight into a scene, attach it to a human action, or cut it. The story must
@@ -734,6 +740,7 @@ Check:
 17. POETRY MODE CHECK: Flag sentences that require decoding a metaphor to understand the story. Flag sections with more than 2 metaphors. The script must be immediately comprehensible on first listen.
 18. SENSORY OVERLOAD CHECK: Flag scenes with more than 2 sensory details. Each scene should have ONE functional sensory detail, max TWO. Decorative atmosphere is a retention killer.
 19. RE-HOOK QUALITY CHECK: Flag re-hooks that ask rhetorical/philosophical questions instead of teasing upcoming events or consequences. Good re-hooks create anticipation for what happens NEXT.
+20. HEDGE SPAM CHECK: Count occurrences of hedging phrases like "Evidence suggests", "Records show", "The evidence points to", "Historians believe", "Records indicate", and "The evidence suggests". If the TOTAL count across all such phrases exceeds 3 in the entire script, flag it. The narrator states facts confidently — hedging is reserved for genuinely disputed claims only, and each hedge phrase should appear at most ONCE.
 
 Return a JSON object:
 - "overall_pass": boolean

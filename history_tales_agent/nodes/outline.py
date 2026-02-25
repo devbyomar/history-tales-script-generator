@@ -6,6 +6,8 @@ import json
 from typing import Any
 
 from history_tales_agent.prompts.templates import OUTLINE_SYSTEM, OUTLINE_USER
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block, build_planning_metadata
 from history_tales_agent.state import (
     EmotionalDriver,
     RehookPlan,
@@ -66,6 +68,21 @@ def outline_node(state: dict[str, Any]) -> dict[str, Any]:
         emotional_drivers_json=emotional_json,
         key_claims=key_claims,
     )
+
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+        logger.info("lens_injected", node="OutlineNode", lenses=[l.lens_id for l in lenses])
+    if geo_block:
+        user_prompt += geo_block
+        logger.info("geo_injected", node="OutlineNode")
 
     # ── Inject lessons from previous runs ──
     lessons = load_lessons_prompt()

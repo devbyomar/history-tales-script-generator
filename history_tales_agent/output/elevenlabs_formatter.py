@@ -81,6 +81,20 @@ _WIKI_VERB_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Hedge-phrase deduplication — safety net for over-hedged scripts.
+# Matches sentence-initial or mid-sentence hedging like:
+#   "Evidence suggests that ...", "The evidence suggests ...",
+#   "Records show that ...", "The evidence points to ..."
+# After the first 2 occurrences in the entire script, remaining hedges are stripped
+# (the factual content after the hedge is kept).
+_HEDGE_PHRASE_RE = re.compile(
+    r"(?:The\s+)?(?:evidence\s+suggests|evidence\s+points?\s+to|records\s+show|records\s+indicate)"
+    r"(?:\s+that)?\s+",
+    re.IGNORECASE,
+)
+
+_MAX_HEDGE_OCCURRENCES = 2
+
 # ──────────────────────────────────────────────────────────────
 # 2.  EMOTIONAL DIRECTION — audio tag injection
 # ──────────────────────────────────────────────────────────────
@@ -397,6 +411,35 @@ def _treat_dialogue(text: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
+# 8b. HEDGE DEDUPLICATION — strip excessive hedging phrases
+# ──────────────────────────────────────────────────────────────
+
+def _deduplicate_hedges(text: str) -> str:
+    """Keep at most _MAX_HEDGE_OCCURRENCES hedge phrases; strip the rest.
+
+    When a hedge is stripped the factual content that follows is kept,
+    with its first letter capitalised so the sentence still reads
+    correctly.
+    """
+    count = 0
+
+    def _replacer(m: re.Match) -> str:
+        nonlocal count
+        count += 1
+        if count <= _MAX_HEDGE_OCCURRENCES:
+            return m.group(0)  # keep this one
+        # Strip the hedge, capitalise the continuation
+        return ""
+
+    result = _HEDGE_PHRASE_RE.sub(_replacer, text)
+    # Capitalise the first letter after a stripped hedge at sentence start
+    # e.g. "  potiorek" → "  Potiorek"
+    result = re.sub(r"(?<=\.\s)([a-z])", lambda m: m.group(1).upper(), result)
+    result = re.sub(r"(?<=\n)([a-z])", lambda m: m.group(1).upper(), result)
+    return result
+
+
+# ──────────────────────────────────────────────────────────────
 # 9.  MASTER PIPELINE
 # ──────────────────────────────────────────────────────────────
 
@@ -428,6 +471,7 @@ def format_elevenlabs(script: str) -> str:
     text = _TIMESTAMP_RE.sub("", text)
     text = _SOURCE_ATTRIBUTION_RE.sub("", text)
     text = _WIKI_VERB_RE.sub("", text)
+    text = _deduplicate_hedges(text)
 
     # ── Step 2: Normalise ──
     text = _normalise_for_tts(text)

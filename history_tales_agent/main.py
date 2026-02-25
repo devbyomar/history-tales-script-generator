@@ -34,6 +34,12 @@ def run_agent(
     sensitivity_level: str = "general audiences",
     nonlinear_open: bool = True,
     previous_format_tag: Optional[str] = None,
+    requested_format_tag: Optional[str] = None,
+    narrative_lens: Optional[str] = None,
+    lens_strength: float = 0.6,
+    geo_scope: Optional[str] = None,
+    geo_anchor: Optional[str] = None,
+    mobility_mode: Optional[str] = None,
     output_dir: str = "output",
 ) -> dict[str, Any]:
     """Run the full documentary script generation pipeline.
@@ -47,6 +53,12 @@ def run_agent(
         sensitivity_level: Content sensitivity level.
         nonlinear_open: Whether to use nonlinear opening.
         previous_format_tag: Previous format for rotation enforcement.
+        requested_format_tag: Force a specific format tag.
+        narrative_lens: Optional narrative lens(es) — comma-separated or single.
+        lens_strength: How strongly the lens biases storytelling (0.0–1.0).
+        geo_scope: Optional geographic scope constraint.
+        geo_anchor: Optional physical focal point for spatial cohesion.
+        mobility_mode: Optional spatial narrative mode.
         output_dir: Directory for output files.
 
     Returns:
@@ -63,6 +75,11 @@ def run_agent(
         geo=geo_focus,
         topic_seed=topic_seed,
         tone=tone,
+        narrative_lens=narrative_lens,
+        lens_strength=lens_strength,
+        geo_scope=geo_scope,
+        geo_anchor=geo_anchor,
+        mobility_mode=mobility_mode,
     )
 
     # Compute word targets
@@ -86,6 +103,12 @@ def run_agent(
         "sensitivity_level": sensitivity_level,
         "nonlinear_open": nonlinear_open,
         "previous_format_tag": previous_format_tag,
+        "requested_format_tag": requested_format_tag,
+        "narrative_lens": narrative_lens,
+        "lens_strength": max(0.0, min(1.0, lens_strength)),
+        "geo_scope": geo_scope,
+        "geo_anchor": geo_anchor,
+        "mobility_mode": mobility_mode,
         "target_words": target_words,
         "min_words": min_words,
         "max_words": max_words,
@@ -199,10 +222,58 @@ Examples:
         help="Previous episode format tag for rotation enforcement",
     )
     parser.add_argument(
+        "--format",
+        type=str,
+        default=None,
+        choices=["Countdown", "One Room", "Two Truths", "Chain Reaction", "Impossible Choice", "Hunt"],
+        help="Force a specific episode format",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="output",
         help="Output directory (default: output/)",
+    )
+
+    # ── Narrative lens / geo / mobility (optional expansions) ──
+    parser.add_argument(
+        "--lens",
+        type=str,
+        default=None,
+        help=(
+            "Narrative lens(es) — comma-separated. "
+            "E.g. 'civilians', 'medics,logistics', 'spies'. "
+            "See docs for full list."
+        ),
+    )
+    parser.add_argument(
+        "--lens-strength",
+        type=float,
+        default=0.6,
+        help="How strongly the lens biases storytelling (0.0–1.0, default 0.6)",
+    )
+    parser.add_argument(
+        "--geo-scope",
+        type=str,
+        default=None,
+        choices=["single_city", "region", "country", "theater", "global"],
+        help="Geographic scope of the story",
+    )
+    parser.add_argument(
+        "--geo-anchor",
+        type=str,
+        default=None,
+        help=(
+            "Physical focal point for spatial cohesion. "
+            "E.g. 'Tempelhof Airport', 'Ludendorff Bridge'"
+        ),
+    )
+    parser.add_argument(
+        "--mobility",
+        type=str,
+        default=None,
+        choices=["fixed_site", "route_based", "multi_site", "theater_wide"],
+        help="Spatial narrative mode",
     )
 
     args = parser.parse_args()
@@ -217,6 +288,12 @@ Examples:
             sensitivity_level=args.sensitivity,
             nonlinear_open=not args.linear_open,
             previous_format_tag=args.previous_format,
+            requested_format_tag=args.format,
+            narrative_lens=args.lens,
+            lens_strength=args.lens_strength,
+            geo_scope=args.geo_scope,
+            geo_anchor=args.geo_anchor,
+            mobility_mode=args.mobility,
             output_dir=args.output_dir,
         )
 
@@ -244,6 +321,15 @@ Examples:
                 for issue in qc.issues[:5]:
                     print(f"   ⚠️  {issue}")
         print(f"\n📁 Output: {args.output_dir}/")
+        # Show narrative controls if active
+        if args.lens:
+            print(f"🔍 Lens: {args.lens} (strength {args.lens_strength:.1f})")
+        if args.geo_scope:
+            print(f"🌍 Geo scope: {args.geo_scope}")
+        if args.geo_anchor:
+            print(f"📍 Geo anchor: {args.geo_anchor}")
+        if args.mobility:
+            print(f"🚗 Mobility: {args.mobility}")
         print("=" * 70)
 
     except KeyboardInterrupt:

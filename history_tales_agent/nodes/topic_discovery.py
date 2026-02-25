@@ -9,6 +9,8 @@ from history_tales_agent.prompts.templates import (
     TOPIC_DISCOVERY_SYSTEM,
     TOPIC_DISCOVERY_USER,
 )
+from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prompt_block
+from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import AgentState, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
 from history_tales_agent.utils.logging import get_logger
@@ -38,6 +40,21 @@ def topic_discovery_node(state: dict[str, Any]) -> dict[str, Any]:
         tone=tone,
         sensitivity_level=sensitivity,
     )
+
+    # ── Inject narrative lens & geo context (no-ops when not set) ──
+    lenses = resolve_lenses(state.get("narrative_lens"))
+    lens_block = build_lens_prompt_block(lenses, state.get("lens_strength", 0.6))
+    geo_block = build_geo_prompt_block(
+        geo_scope=state.get("geo_scope"),
+        geo_anchor=state.get("geo_anchor"),
+        mobility_mode=state.get("mobility_mode"),
+    )
+    if lens_block:
+        user_prompt += lens_block
+        logger.info("lens_injected", node="TopicDiscoveryNode", lenses=[l.lens_id for l in lenses])
+    if geo_block:
+        user_prompt += geo_block
+        logger.info("geo_injected", node="TopicDiscoveryNode")
 
     try:
         raw_candidates = call_llm_json(TOPIC_DISCOVERY_SYSTEM, user_prompt, tier="fast")
