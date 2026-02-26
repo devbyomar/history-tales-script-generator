@@ -33,12 +33,12 @@ if [ "$1" == "--set-secrets" ]; then
     read -p "Enter OPENAI_API_KEY: " api_key
     flyctl secrets set OPENAI_API_KEY="$api_key"
     
-    read -p "Enter OPENAI_MODEL (default: gpt-4o): " model
-    model=${model:-gpt-4o}
+    read -p "Enter OPENAI_MODEL (default: gpt-5): " model
+    model=${model:-gpt-5}
     flyctl secrets set OPENAI_MODEL="$model"
     
-    read -p "Enter OPENAI_FAST_MODEL (default: gpt-4o-mini): " fast_model
-    fast_model=${fast_model:-gpt-4o-mini}
+    read -p "Enter OPENAI_FAST_MODEL (default: gpt-5.2): " fast_model
+    fast_model=${fast_model:-gpt-5.2}
     flyctl secrets set OPENAI_FAST_MODEL="$fast_model"
     
     read -p "Enter your Vercel frontend URL (e.g., https://history-tales.vercel.app): " frontend_url

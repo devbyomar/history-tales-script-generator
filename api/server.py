@@ -48,7 +48,7 @@ async def health_check():
     return HealthResponse(
         status="ok",
         version="1.0.0",
-        pipeline_nodes=16,
+        pipeline_nodes=18,
         models={
             "creative": cfg.openai_model,
             "fast": cfg.openai_fast_model or cfg.openai_model,

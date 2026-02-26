@@ -1,4 +1,4 @@
-"""LangGraph workflow definition — the 16-node documentary generation pipeline."""
+"""LangGraph workflow definition — the 18-node documentary generation pipeline."""
 
 from __future__ import annotations
 

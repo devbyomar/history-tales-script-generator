@@ -25,6 +25,11 @@ class GenerateRequest(BaseModel):
     nonlinear_open: bool = Field(True, description="Use nonlinear opening")
     previous_format_tag: Optional[str] = Field(None, description="Previous format for rotation")
     requested_format_tag: Optional[str] = Field(None, description="Force a specific format tag")
+    narrative_lens: Optional[str] = Field(None, description="Narrative lens(es) — comma-separated (e.g. 'civilians', 'medics,logistics')")
+    lens_strength: float = Field(0.6, ge=0.0, le=1.0, description="How strongly the lens biases storytelling (0.0–1.0)")
+    geo_scope: Optional[str] = Field(None, description="Geographic scope (single_city, region, country, theater, global)")
+    geo_anchor: Optional[str] = Field(None, description="Physical focal point for spatial cohesion")
+    mobility_mode: Optional[str] = Field(None, description="Spatial narrative mode (fixed_site, route_based, multi_site, theater_wide)")
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +83,7 @@ class NodeProgress(BaseModel):
     node: str
     status: str  # "started" | "completed" | "failed"
     node_index: int  # 1-based position in pipeline
-    total_nodes: int = 16
+    total_nodes: int = 18
     message: str = ""
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     data: Optional[dict[str, Any]] = None  # Optional extra data from node
@@ -89,5 +94,5 @@ class HealthResponse(BaseModel):
 
     status: str = "ok"
     version: str = "1.0.0"
-    pipeline_nodes: int = 16
+    pipeline_nodes: int = 18
     models: dict[str, str] = Field(default_factory=dict)
