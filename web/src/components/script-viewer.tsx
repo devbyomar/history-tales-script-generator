@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,8 +10,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, FileText, BookOpen, Shield, BarChart3 } from "lucide-react";
-import { getExportScriptUrl, getExportSourcesUrl } from "@/lib/api";
+import {
+  Download,
+  FileText,
+  BookOpen,
+  Shield,
+  BarChart3,
+  Copy,
+  Check,
+  Mic,
+  Zap,
+} from "lucide-react";
+import {
+  getExportScriptUrl,
+  getExportSourcesUrl,
+  getExportElevenlabsV3Url,
+  getExportElevenlabsFlashUrl,
+} from "@/lib/api";
 import type { RunDetail } from "@/lib/api";
 
 interface ScriptViewerProps {
@@ -48,7 +64,7 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -65,15 +81,47 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
               <Download className="h-3.5 w-3.5 mr-1.5" />
               Sources
             </Button>
+            {run.script_elevenlabs_v3 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(getExportElevenlabsV3Url(run.run_id))
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                v3
+              </Button>
+            )}
+            {run.script_elevenlabs_flash && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(getExportElevenlabsFlashUrl(run.run_id))
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Flash
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="script" className="w-full">
-          <TabsList className="w-full justify-start">
+          <TabsList className="w-full justify-start flex-wrap h-auto gap-1">
             <TabsTrigger value="script" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" />
               Script
+            </TabsTrigger>
+            <TabsTrigger value="elevenlabs-v3" className="gap-1.5">
+              <Mic className="h-3.5 w-3.5" />
+              ElevenLabs v3
+            </TabsTrigger>
+            <TabsTrigger value="elevenlabs-flash" className="gap-1.5">
+              <Zap className="h-3.5 w-3.5" />
+              ElevenLabs Flash
             </TabsTrigger>
             <TabsTrigger value="sources" className="gap-1.5">
               <BookOpen className="h-3.5 w-3.5" />
@@ -123,6 +171,24 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* ElevenLabs v3 Tab */}
+          <TabsContent value="elevenlabs-v3" className="mt-4">
+            <ElevenLabsPanel
+              content={run.script_elevenlabs_v3}
+              label="ElevenLabs v3"
+              description="Optimised for Eleven v3 — audio tags for emotional direction, emphasis via CAPS, ellipsis-based pauses. No SSML."
+            />
+          </TabsContent>
+
+          {/* ElevenLabs Flash Tab */}
+          <TabsContent value="elevenlabs-flash" className="mt-4">
+            <ElevenLabsPanel
+              content={run.script_elevenlabs_flash}
+              label="ElevenLabs Flash / Turbo"
+              description="Optimised for Flash v2.5, Turbo v2.5, and Multilingual v2 — SSML break tags for pacing, aggressive text normalisation. No audio tags."
+            />
           </TabsContent>
 
           {/* Sources Tab */}
@@ -265,6 +331,83 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
         </Tabs>
       </CardContent>
     </Card>
+  );
+}
+
+function ElevenLabsPanel({
+  content,
+  label,
+  description,
+}: {
+  content?: string;
+  label: string;
+  description: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!content) return;
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = content;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  if (!content) {
+    return (
+      <div className="rounded-lg border bg-background/50 p-6">
+        <p className="text-muted-foreground italic text-sm">
+          No {label} script available yet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground max-w-[70%]">
+          {description}
+        </p>
+        <Button
+          variant={copied ? "default" : "outline"}
+          size="sm"
+          onClick={handleCopy}
+          className="shrink-0"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy to Clipboard
+            </>
+          )}
+        </Button>
+      </div>
+      <div className="max-h-[600px] overflow-y-auto rounded-lg border bg-background/50 p-6">
+        <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 font-mono">
+          {content}
+        </pre>
+      </div>
+      <p className="text-xs text-muted-foreground text-right">
+        {content.split(/\s+/).filter(Boolean).length.toLocaleString()} words
+      </p>
+    </div>
   );
 }
 

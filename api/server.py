@@ -237,3 +237,45 @@ async def export_sources(run_id: str):
             "claims": run.claims,
         }
     )
+
+
+@app.get("/runs/{run_id}/export/elevenlabs-v3")
+async def export_elevenlabs_v3(run_id: str):
+    """Export the Eleven v3 TTS-ready script as plain text."""
+    run = run_store.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    if not run.script_elevenlabs_v3:
+        raise HTTPException(status_code=400, detail="No ElevenLabs v3 script available yet")
+
+    from fastapi.responses import PlainTextResponse
+
+    title = run.title or "Untitled"
+    return PlainTextResponse(
+        content=run.script_elevenlabs_v3,
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="{title.replace(" ", "_")}_elevenlabs_v3.txt"'
+        },
+    )
+
+
+@app.get("/runs/{run_id}/export/elevenlabs-flash")
+async def export_elevenlabs_flash(run_id: str):
+    """Export the Eleven Flash/Turbo TTS-ready script as plain text."""
+    run = run_store.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    if not run.script_elevenlabs_flash:
+        raise HTTPException(status_code=400, detail="No ElevenLabs Flash script available yet")
+
+    from fastapi.responses import PlainTextResponse
+
+    title = run.title or "Untitled"
+    return PlainTextResponse(
+        content=run.script_elevenlabs_flash,
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="{title.replace(" ", "_")}_elevenlabs_flash.txt"'
+        },
+    )

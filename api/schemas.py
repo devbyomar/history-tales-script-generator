@@ -70,6 +70,8 @@ class RunDetail(RunSummary):
     """Full detail of a pipeline run, including the script."""
 
     final_script: Optional[str] = None
+    script_elevenlabs_v3: Optional[str] = None
+    script_elevenlabs_flash: Optional[str] = None
     sources_log: list[dict[str, Any]] = Field(default_factory=list)
     claims: list[dict[str, Any]] = Field(default_factory=list)
     qc_report: Optional[dict[str, Any]] = None

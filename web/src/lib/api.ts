@@ -50,6 +50,8 @@ export interface RunSummary {
 
 export interface RunDetail extends RunSummary {
   final_script?: string;
+  script_elevenlabs_v3?: string;
+  script_elevenlabs_flash?: string;
   sources_log: Record<string, unknown>[];
   claims: Record<string, unknown>[];
   qc_report?: Record<string, unknown>;
@@ -179,4 +181,12 @@ export function getExportScriptUrl(runId: string): string {
 
 export function getExportSourcesUrl(runId: string): string {
   return `${API_URL}/runs/${runId}/export/sources`;
+}
+
+export function getExportElevenlabsV3Url(runId: string): string {
+  return `${API_URL}/runs/${runId}/export/elevenlabs-v3`;
+}
+
+export function getExportElevenlabsFlashUrl(runId: string): string {
+  return `${API_URL}/runs/${runId}/export/elevenlabs-flash`;
 }

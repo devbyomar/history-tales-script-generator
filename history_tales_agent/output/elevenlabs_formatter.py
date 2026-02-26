@@ -1,10 +1,16 @@
 """ElevenLabs TTS formatter — converts pipeline script to voice-ready text.
 
-Strips structural markers, injects Eleven v3 audio tags, adds SSML break tags
-for pacing, normalises text for TTS, and applies emotional direction based on
-narrative context analysis.
+Produces TWO output variants from the same raw script:
 
-Output: a plain-text file ready for seamless paste into ElevenLabs.
+  1. **v3** — optimised for Eleven v3 (audio tags for emotional direction,
+     ellipsis / punctuation for pauses, emphasis via CAPS).
+     v3 does NOT support SSML ``<break>`` tags.
+
+  2. **Flash / Turbo** — optimised for Eleven Flash v2.5, Turbo v2.5, and
+     Multilingual v2 (SSML ``<break>`` tags for pacing, no audio tags,
+     aggressive text normalisation for smaller models).
+
+Both variants share the same stripping, emphasis, and hedge-dedup steps.
 """
 
 from __future__ import annotations
@@ -235,8 +241,8 @@ def _classify_sentence(sentence: str) -> str | None:
 # 3.  PACING — pauses, emphasis, breath marks
 # ──────────────────────────────────────────────────────────────
 
-def _apply_pacing(text: str) -> str:
-    """Add SSML breaks and emphasis for natural documentary delivery."""
+def _apply_pacing_ssml(text: str) -> str:
+    """Add SSML breaks for Flash / Turbo / Multilingual v2 models."""
 
     BREAK_15 = '<break time="1.5s" />'
     BREAK_05 = '<break time="0.5s" />'
@@ -247,14 +253,9 @@ def _apply_pacing(text: str) -> str:
     text = re.sub(r"\n\n+", f"\n\n{BREAK_15}\n\n", text)
 
     # 3b.  Em dashes used for dramatic parentheticals → short pause around them
-    #       "Harris's cigarette—Players Navy Cut, soft-packed—left a blister"
-    #       becomes natural breath-pause territory.
-    #       Replace "—" with " … " which ElevenLabs reads as a hesitation pause.
-    #       But ONLY when used as parenthetical dashes (surrounded by words).
     text = re.sub(r"(\w)—(\w)", r"\1 … \2", text)
 
     # 3c.  Sentences ending with "?" get a micro-pause before them
-    #       to let the question land with weight.
     text = re.sub(
         r"\.\s+([A-Z][^.?!]*\?)",
         lambda m: f". {BREAK_05} {m.group(1)}",
@@ -262,7 +263,6 @@ def _apply_pacing(text: str) -> str:
     )
 
     # 3d.  Lists of short fragments (e.g. "By absences. By units. By orders.")
-    #       → add breath between each for staccato delivery
     text = re.sub(
         r"\.\s+(By\s)",
         lambda m: f". {BREAK_03} {m.group(1)}",
@@ -277,6 +277,39 @@ def _apply_pacing(text: str) -> str:
     )
 
     return text
+
+
+def _apply_pacing_v3(text: str) -> str:
+    """Add punctuation-based pauses for Eleven v3 (no SSML support).
+
+    Uses ellipsis (…), em dashes, and line breaks — the pause cues
+    that v3 actually responds to.
+    """
+
+    # 3a.  Paragraph breaks → double newline + ellipsis breath
+    text = re.sub(r"\n\n+", "\n\n...\n\n", text)
+
+    # 3b.  Em dashes → ellipsis (v3 reads "…" as a natural hesitation)
+    text = re.sub(r"(\w)—(\w)", r"\1... \2", text)
+
+    # 3c.  Pre-question pause via ellipsis
+    text = re.sub(
+        r"\.\s+([A-Z][^.?!]*\?)",
+        lambda m: f". ... {m.group(1)}",
+        text,
+    )
+
+    # 3d.  Staccato fragments
+    text = re.sub(r"\.\s+(By\s)", r". ... \1", text)
+
+    # 3e.  "Close enough that" pattern
+    text = re.sub(r"\.\s+(Close enough that)", r". ... \1", text)
+
+    return text
+
+
+# Legacy alias — keeps existing tests / imports working
+_apply_pacing = _apply_pacing_ssml
 
 
 # ──────────────────────────────────────────────────────────────
@@ -341,6 +374,50 @@ def _normalise_for_tts(text: str) -> str:
     return text
 
 
+def _normalise_for_tts_flash(text: str) -> str:
+    """Aggressive normalisation for Flash / Turbo / v2 models.
+
+    These smaller models struggle more with numbers, abbreviations,
+    and uncommon formatting than v3.  We spell things out explicitly.
+    """
+    # Start with standard normalisation
+    text = _normalise_for_tts(text)
+
+    # 5g.  Ordinal numbers — spell out common ones
+    _ordinals = {
+        "1st": "first", "2nd": "second", "3rd": "third", "4th": "fourth",
+        "5th": "fifth", "6th": "sixth", "7th": "seventh", "8th": "eighth",
+        "9th": "ninth", "10th": "tenth", "11th": "eleventh", "12th": "twelfth",
+        "13th": "thirteenth", "14th": "fourteenth", "15th": "fifteenth",
+        "16th": "sixteenth", "17th": "seventeenth", "18th": "eighteenth",
+        "19th": "nineteenth", "20th": "twentieth", "21st": "twenty-first",
+    }
+    for k, v in _ordinals.items():
+        text = re.sub(rf"\b{k}\b", v, text, flags=re.IGNORECASE)
+
+    # 5h.  Common military / historical abbreviations
+    text = re.sub(r"\bHQ\b", "headquarters", text)
+    text = re.sub(r"\bGHQ\b", "general headquarters", text)
+    text = re.sub(r"\bPOW\b", "prisoner of war", text)
+    text = re.sub(r"\bKIA\b", "killed in action", text)
+    text = re.sub(r"\bMIA\b", "missing in action", text)
+    text = re.sub(r"\bSS\b", "S.S.", text)
+    text = re.sub(r"\bRAF\b", "R.A.F.", text)
+    text = re.sub(r"\bCIA\b", "C.I.A.", text)
+    text = re.sub(r"\bFBI\b", "F.B.I.", text)
+    text = re.sub(r"\bKGB\b", "K.G.B.", text)
+    text = re.sub(r"\bNATO\b", "NATO", text)  # already pronounceable
+    text = re.sub(r"\bUSSR\b", "U.S.S.R.", text)
+
+    # 5i.  Percentage sign
+    text = re.sub(r"(\d+)%", r"\1 percent", text)
+
+    # 5j.  Ampersand
+    text = text.replace(" & ", " and ")
+
+    return text
+
+
 # ──────────────────────────────────────────────────────────────
 # 6.  AUDIO TAG INJECTION — paragraph-level emotional direction
 # ──────────────────────────────────────────────────────────────
@@ -396,13 +473,8 @@ def _extract_first_sentence(text: str) -> str:
 # 7.  SECTION TRANSITION BREATHS
 # ──────────────────────────────────────────────────────────────
 
-def _add_section_transitions(text: str) -> str:
-    """Insert longer pauses where major story sections transition.
-
-    After stripping section headers, we detect natural act boundaries
-    by looking for temporal jumps or scene changes and add a 2s breath.
-    """
-    # After a paragraph that ends a scene, before a new time marker
+def _add_section_transitions_ssml(text: str) -> str:
+    """Insert SSML 2s pauses at major scene changes (Flash / Turbo)."""
     text = re.sub(
         r"(\.\s*)\n\n(<break[^>]*>\s*\n\n)?(\d{4}|London|Madrid|Dawn|Back in)",
         r"\1\n\n<break time=\"2.0s\" />\n\n\3",
@@ -411,24 +483,46 @@ def _add_section_transitions(text: str) -> str:
     return text
 
 
+def _add_section_transitions_v3(text: str) -> str:
+    """Insert ellipsis-based scene-change breaths for v3."""
+    text = re.sub(
+        r"(\.\s*)\n\n(\.\.\.\s*\n\n)?(\d{4}|London|Madrid|Dawn|Back in)",
+        r"\1\n\n...\n\n\3",
+        text,
+    )
+    return text
+
+
+# Legacy alias
+_add_section_transitions = _add_section_transitions_ssml
+
+
 # ──────────────────────────────────────────────────────────────
 # 8.  DIALOGUE TREATMENT
 # ──────────────────────────────────────────────────────────────
 
-def _treat_dialogue(text: str) -> str:
-    """Add subtle delivery cues around quoted speech.
-
-    ElevenLabs reads quoted text with a slight voice shift if
-    we add a micro-pause before the quote. This mimics the narrator
-    'stepping into character' briefly.
-    """
-    # Add a tiny pause before dialogue quotes that follow narration
+def _treat_dialogue_ssml(text: str) -> str:
+    """Add SSML micro-pause before quoted speech (Flash / Turbo)."""
     text = re.sub(
         r'(\w[.:,])\s+"([A-Z])',
         r'\1 <break time="0.3s" /> "\2',
         text,
     )
     return text
+
+
+def _treat_dialogue_v3(text: str) -> str:
+    """Add ellipsis pause before quoted speech (v3 — no SSML)."""
+    text = re.sub(
+        r'(\w[.:,])\s+"([A-Z])',
+        r'\1 ... "\2',
+        text,
+    )
+    return text
+
+
+# Legacy alias
+_treat_dialogue = _treat_dialogue_ssml
 
 
 # ──────────────────────────────────────────────────────────────
@@ -461,26 +555,12 @@ def _deduplicate_hedges(text: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
-# 9.  MASTER PIPELINE
+# 9.  MASTER PIPELINES
 # ──────────────────────────────────────────────────────────────
 
-def format_elevenlabs(script: str) -> str:
-    """Full pipeline: raw script → ElevenLabs-ready narration text.
-
-    Processing order matters:
-    1. Strip structural markers (section headers, rehooks, CTA, etc.)
-    2. Normalise text for TTS (abbreviations, smart quotes, markdown)
-    3. Apply emphasis on payoff words
-    4. Apply pacing (breaks, em-dash → ellipsis, staccato patterns)
-    5. Treat dialogue (pre-quote pauses)
-    6. Inject audio tags (emotional direction per paragraph)
-    7. Add section transition breaths
-    8. Final cleanup
-    """
-
+def _strip_structural(script: str) -> str:
+    """Step 1 — shared stripping of structural markers."""
     text = script
-
-    # ── Step 1: Strip ──
     text = _CTA_BLOCK_RE.sub("", text)
     text = _SECTION_HEADER_RE.sub("", text)
     text = _MD_TITLE_RE.sub("", text)
@@ -495,34 +575,73 @@ def format_elevenlabs(script: str) -> str:
     text = _SOURCE_ATTRIBUTION_RE.sub("", text)
     text = _WIKI_VERB_RE.sub("", text)
     text = _deduplicate_hedges(text)
-
-    # ── Step 2: Normalise ──
-    text = _normalise_for_tts(text)
-
-    # ── Step 3: Emphasis ──
-    text = _apply_emphasis(text)
-
-    # ── Step 4: Pacing ──
-    text = _apply_pacing(text)
-
-    # ── Step 5: Dialogue ──
-    text = _treat_dialogue(text)
-
-    # ── Step 6: Audio tags ──
-    text = _inject_audio_tags(text)
-
-    # ── Step 7: Section transitions ──
-    text = _add_section_transitions(text)
-
-    # ── Step 8: Final cleanup ──
-    # Remove excessive blank lines
-    text = re.sub(r"\n{4,}", "\n\n\n", text)
-    # Remove leading/trailing whitespace
-    text = text.strip()
-    # Ensure single newline at end
-    text += "\n"
-
     return text
+
+
+def _final_cleanup(text: str) -> str:
+    """Step 8 — shared final cleanup."""
+    text = re.sub(r"\n{4,}", "\n\n\n", text)
+    text = text.strip()
+    text += "\n"
+    return text
+
+
+# ── 9a.  v3 pipeline ─────────────────────────────────────────
+
+def format_elevenlabs_v3(script: str) -> str:
+    """Full pipeline: raw script → Eleven v3-ready narration text.
+
+    v3 supports audio tags ([curious], [tense], etc.) and emphasis
+    via CAPS. It does NOT support SSML <break> tags. Pauses are
+    achieved via ellipsis (…) and punctuation.
+    """
+    text = _strip_structural(script)
+    text = _normalise_for_tts(text)
+    text = _apply_emphasis(text)
+    text = _apply_pacing_v3(text)
+    text = _treat_dialogue_v3(text)
+    text = _inject_audio_tags(text)
+    text = _add_section_transitions_v3(text)
+    return _final_cleanup(text)
+
+
+# ── 9b.  Flash / Turbo pipeline ──────────────────────────────
+
+def format_elevenlabs_flash(script: str) -> str:
+    """Full pipeline: raw script → Eleven Flash / Turbo-ready text.
+
+    Flash v2.5, Turbo v2.5, and Multilingual v2 support SSML
+    <break> tags but do NOT support audio tags. Text normalisation
+    is more aggressive (spell out abbreviations, ordinals, etc.)
+    because these are smaller models.
+    """
+    text = _strip_structural(script)
+    text = _normalise_for_tts_flash(text)
+    text = _apply_emphasis(text)
+    text = _apply_pacing_ssml(text)
+    text = _treat_dialogue_ssml(text)
+    # NO audio tag injection — Flash/Turbo ignore them
+    text = _add_section_transitions_ssml(text)
+    return _final_cleanup(text)
+
+
+# ── 9c.  Legacy alias — keeps old call-sites working ─────────
+
+def format_elevenlabs(script: str) -> str:
+    """Legacy pipeline — produces Flash/Turbo output with audio tags.
+
+    Maintained for backward compatibility with existing tests.
+    New code should use ``format_elevenlabs_v3`` or
+    ``format_elevenlabs_flash`` directly.
+    """
+    text = _strip_structural(script)
+    text = _normalise_for_tts(text)
+    text = _apply_emphasis(text)
+    text = _apply_pacing_ssml(text)
+    text = _treat_dialogue_ssml(text)
+    text = _inject_audio_tags(text)
+    text = _add_section_transitions_ssml(text)
+    return _final_cleanup(text)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -532,32 +651,46 @@ def format_elevenlabs(script: str) -> str:
 def write_elevenlabs_script(
     state: dict[str, Any],
     output_dir: str = "output",
-) -> Path:
-    """Write the ElevenLabs-ready narration file.
+) -> tuple[Path, Path]:
+    """Write both ElevenLabs-ready narration files.
 
-    Returns the path to the written file.
+    Creates:
+        output/script_elevenlabs_v3.txt   — for Eleven v3
+        output/script_elevenlabs_flash.txt — for Flash / Turbo / v2
+
+    Returns tuple of (v3_path, flash_path).
     """
     script = state.get("final_script", "")
     if not script:
         logger.warning("elevenlabs_no_script")
-        return Path(output_dir)
+        out = Path(output_dir)
+        return out / "script_elevenlabs_v3.txt", out / "script_elevenlabs_flash.txt"
 
     chosen = state.get("chosen_topic")
     title = chosen.title if chosen else "Untitled"
 
-    el_text = format_elevenlabs(script)
+    v3_text = format_elevenlabs_v3(script)
+    flash_text = format_elevenlabs_flash(script)
 
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    el_path = out / "script_elevenlabs.txt"
-    el_path.write_text(el_text, encoding="utf-8")
 
-    word_count = len(el_text.split())
+    v3_path = out / "script_elevenlabs_v3.txt"
+    v3_path.write_text(v3_text, encoding="utf-8")
     logger.info(
-        "wrote_elevenlabs_script",
-        path=str(el_path),
-        words=word_count,
+        "wrote_elevenlabs_v3",
+        path=str(v3_path),
+        words=len(v3_text.split()),
         title=title,
     )
 
-    return el_path
+    flash_path = out / "script_elevenlabs_flash.txt"
+    flash_path.write_text(flash_text, encoding="utf-8")
+    logger.info(
+        "wrote_elevenlabs_flash",
+        path=str(flash_path),
+        words=len(flash_text.split()),
+        title=title,
+    )
+
+    return v3_path, flash_path

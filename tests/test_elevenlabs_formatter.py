@@ -9,12 +9,17 @@ import pytest
 from history_tales_agent.output.elevenlabs_formatter import (
     _apply_emphasis,
     _apply_pacing,
+    _apply_pacing_v3,
     _classify_sentence,
     _deduplicate_hedges,
     _extract_first_sentence,
     _normalise_for_tts,
+    _normalise_for_tts_flash,
     _treat_dialogue,
+    _treat_dialogue_v3,
     format_elevenlabs,
+    format_elevenlabs_flash,
+    format_elevenlabs_v3,
 )
 
 
@@ -406,4 +411,186 @@ class TestFullPipeline:
     def test_dialogue_gets_pause(self):
         result = format_elevenlabs(self.SAMPLE_SCRIPT)
         # The quote after "Harris said." should have a break
+        assert '<break time="0.3s" />' in result
+
+
+# ─── v3 Pipeline ─────────────────────────────────────────────
+
+
+class TestPacingV3:
+    """v3 pacing uses ellipsis instead of SSML breaks."""
+
+    def test_paragraph_break_inserts_ellipsis(self):
+        text = "First paragraph.\n\nSecond paragraph."
+        result = _apply_pacing_v3(text)
+        assert "..." in result
+        assert "<break" not in result
+
+    def test_em_dash_becomes_ellipsis(self):
+        text = "word—another"
+        result = _apply_pacing_v3(text)
+        assert "word..." in result
+        assert "<break" not in result
+
+
+class TestDialogueV3:
+    """v3 dialogue uses ellipsis pauses, not SSML."""
+
+    def test_pause_before_quote_is_ellipsis(self):
+        text = 'Harris said. "Sound Madrid-born."'
+        result = _treat_dialogue_v3(text)
+        assert '... "Sound' in result
+        assert "<break" not in result
+
+
+class TestV3FullPipeline:
+    """End-to-end tests for the v3 pipeline."""
+
+    SAMPLE_SCRIPT = TestFullPipeline.SAMPLE_SCRIPT
+
+    def test_no_structural_markers(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "---" not in result
+        assert "Re-hook" not in result
+        assert "CTA" not in result
+
+    def test_no_timestamps(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "T-20:00" not in result
+
+    def test_no_disclaimer(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "historical synthesis" not in result
+
+    def test_mi5_expanded(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "M.I. Five" in result
+
+    def test_emphasis_applied(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "risk EVERYTHING" in result
+
+    def test_has_audio_tags(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert re.search(r"\[(?:curious|tense|solemn|resolute|intense|intrigued)\]", result)
+
+    def test_no_ssml_break_tags(self):
+        """v3 must NOT have SSML break tags — it doesn't support them."""
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "<break time=" not in result
+
+    def test_uses_ellipsis_for_pauses(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "..." in result
+
+    def test_no_cta_content(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "Stay with us" not in result
+
+    def test_output_is_clean_text(self):
+        result = format_elevenlabs_v3(self.SAMPLE_SCRIPT)
+        assert "# " not in result
+        assert "**" not in result
+
+
+# ─── Flash Pipeline ──────────────────────────────────────────
+
+
+class TestFlashNormalisation:
+    """Flash-specific aggressive normalisation."""
+
+    def test_ordinal_expanded(self):
+        text = "The 5th army advanced."
+        result = _normalise_for_tts_flash(text)
+        assert "fifth" in result
+        assert "5th" not in result
+
+    def test_hq_expanded(self):
+        text = "Report to HQ immediately."
+        result = _normalise_for_tts_flash(text)
+        assert "headquarters" in result
+        assert "HQ" not in result
+
+    def test_kgb_expanded(self):
+        text = "The KGB intercepted the message."
+        result = _normalise_for_tts_flash(text)
+        assert "K.G.B." in result
+
+    def test_cia_expanded(self):
+        text = "The CIA ran the operation."
+        result = _normalise_for_tts_flash(text)
+        assert "C.I.A." in result
+
+    def test_percentage_expanded(self):
+        text = "Roughly 80% of the force."
+        result = _normalise_for_tts_flash(text)
+        assert "80 percent" in result
+        assert "%" not in result
+
+    def test_ampersand_expanded(self):
+        text = "Supply & demand shifted."
+        result = _normalise_for_tts_flash(text)
+        assert " and " in result
+        assert " & " not in result
+
+    def test_pow_expanded(self):
+        text = "He was classified as a POW."
+        result = _normalise_for_tts_flash(text)
+        assert "prisoner of war" in result
+
+    def test_includes_standard_normalisation(self):
+        """Flash normalisation should also apply standard MI5 → M.I. Five."""
+        text = "MI5 knew everything."
+        result = _normalise_for_tts_flash(text)
+        assert "M.I. Five" in result
+
+
+class TestFlashFullPipeline:
+    """End-to-end tests for the Flash / Turbo pipeline."""
+
+    SAMPLE_SCRIPT = TestFullPipeline.SAMPLE_SCRIPT
+
+    def test_no_structural_markers(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "---" not in result
+        assert "Re-hook" not in result
+        assert "CTA" not in result
+
+    def test_no_timestamps(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "T-20:00" not in result
+
+    def test_no_disclaimer(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "historical synthesis" not in result
+
+    def test_mi5_expanded(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "M.I. Five" in result
+
+    def test_emphasis_applied(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "risk EVERYTHING" in result
+
+    def test_no_audio_tags(self):
+        """Flash must NOT have audio tags — it doesn't support them."""
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert not re.search(r"\[(?:curious|tense|solemn|resolute|intense|intrigued)\]", result)
+
+    def test_has_ssml_break_tags(self):
+        """Flash supports SSML breaks."""
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "<break time=" in result
+
+    def test_no_cta_content(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "Stay with us" not in result
+
+    def test_output_is_clean_text(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
+        assert "# " not in result
+        assert "**" not in result
+
+    def test_dialogue_gets_ssml_pause(self):
+        result = format_elevenlabs_flash(self.SAMPLE_SCRIPT)
         assert '<break time="0.3s" />' in result
