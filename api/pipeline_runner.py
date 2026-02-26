@@ -239,10 +239,20 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
         qc = final_state.get("qc_report")
         script = final_state.get("final_script", "")
 
+        # Generate ElevenLabs TTS variants (pure text transforms — no LLM calls)
+        from history_tales_agent.output.elevenlabs_formatter import (
+            format_elevenlabs_v3,
+            format_elevenlabs_flash,
+        )
+        script_el_v3 = format_elevenlabs_v3(script) if script else ""
+        script_el_flash = format_elevenlabs_flash(script) if script else ""
+
         update_data: dict[str, Any] = {
             "status": "completed",
             "completed_at": datetime.utcnow().isoformat(),
             "final_script": script,
+            "script_elevenlabs_v3": script_el_v3,
+            "script_elevenlabs_flash": script_el_flash,
             "word_count": len(script.split()) if script else 0,
             "target_words": target_words,
             "emotional_intensity": final_state.get("emotional_intensity_score", 0),

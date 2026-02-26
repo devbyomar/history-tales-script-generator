@@ -55,7 +55,7 @@ class RunStore:
             key=lambda r: r.created_at,
             reverse=True,
         )[:limit]
-        return [RunSummary(**r.model_dump(exclude={"final_script", "sources_log", "claims", "qc_report", "errors"})) for r in runs]
+        return [RunSummary(**r.model_dump(exclude={"final_script", "sources_log", "claims", "qc_report", "errors", "script_elevenlabs_v3", "script_elevenlabs_flash"})) for r in runs]
 
     def update_run(self, run_id: str, **kwargs: Any) -> None:
         """Update fields on an existing run."""
