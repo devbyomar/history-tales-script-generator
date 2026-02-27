@@ -1,4 +1,4 @@
-"""ScriptGenerationNode — Stage A: writes the draft documentary script.
+"""ScriptGenerationNode — Stage A: writes the draft history script.
 
 Stage B (FactTightenNode) follows to add trace tags and tighten facts.
 """
@@ -33,7 +33,7 @@ logger = get_logger(__name__)
 
 
 def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate the complete documentary script."""
+    """Generate the complete history script."""
     logger.info("node_start", node="ScriptGenerationNode")
 
     chosen: TopicCandidate | None = state.get("chosen_topic")
@@ -218,22 +218,22 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             attempt=attempt,
         )
         expand_system = (
-            "You are an expert history documentary scriptwriter performing a "
+            "You are an expert long-form YouTube history storyteller performing a "
             "SURGICAL expansion. You will add exactly the number of words "
-            "requested, spread proportionally across every section of the "
-            "script. Do NOT rewrite existing sentences — INSERT new ones "
+            "requested, spread proportionally across the entire script. "
+            "Do NOT rewrite existing sentences — INSERT new ones "
             "between them.\n\n"
             "RULES:\n"
             "1. Keep every existing sentence UNCHANGED — do not rephrase, "
             "merge, or delete anything.\n"
-            "2. Keep every section marker (--- [SECTION] ---) intact.\n"
-            "3. Spread new material EVENLY across all sections — do not dump "
-            "all additions into one act.\n"
-            "4. Each new sentence must contain a concrete historical detail, "
+            "2. Spread new material EVENLY across the script — do not dump "
+            "all additions into one stretch.\n"
+            "3. Each new sentence must contain a concrete historical detail, "
             "a REAL person's name, or a functional sensory cue.\n"
-            "5. Do NOT invent fictional characters. Every named person must "
+            "4. Do NOT invent fictional characters. Every named person must "
             "be historically documented.\n"
-            "6. Do NOT add filler, hedging, or meta-commentary.\n"
+            "5. Do NOT add filler, hedging, or meta-commentary.\n"
+            "6. Output PURE SPOKEN TEXT — no section headers, no labels, no markers.\n"
             "7. Count your output carefully. Your FINAL word count must land "
             f"between {min_words} and {max_words}."
         )
@@ -243,7 +243,7 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             f"ALLOWED range: {min_words}–{max_words}\n"
             f"WORDS TO ADD: approximately {words_needed}\n\n"
             f"Spread ~{words_needed} new words across the script below. "
-            f"Add 2–4 new sentences per section, each with a concrete "
+            f"Add 2–4 new sentences throughout, each with a concrete "
             f"historical detail. Do NOT remove or change existing text.\n\n"
             f"Output ONLY the complete expanded script.\n\n"
             f"{script}"

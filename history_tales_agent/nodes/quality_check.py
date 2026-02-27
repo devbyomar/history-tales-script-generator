@@ -95,9 +95,10 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
     # Check for disclaimer — flexible matching
     disclaimer_phrases = [
         "historical synthesis based on cited sources",
+        "historical synthesis based on publicly available",
         "historical synthesis",
         "based on cited sources",
-        "documentary script is a historical",
+        "script is a historical",
     ]
     has_disclaimer = any(phrase in script.lower() for phrase in disclaimer_phrases)
     if not has_disclaimer:
