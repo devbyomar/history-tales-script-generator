@@ -44,6 +44,7 @@ def run_agent(
     mobility_mode: Optional[str] = None,
     output_dir: str = "output",
     output_mode: str = "standard",
+    skip_topic_exploration: bool = False,
 ) -> dict[str, Any]:
     """Run the full documentary script generation pipeline.
 
@@ -64,6 +65,7 @@ def run_agent(
         mobility_mode: Optional spatial narrative mode.
         output_dir: Directory for output files.
         output_mode: Output mode — "standard" or "speechify_export".
+        skip_topic_exploration: If True, skip discovery & scoring; use topic_seed directly.
 
     Returns:
         Dict containing all pipeline state including final_script, qc_report, etc.
@@ -121,6 +123,7 @@ def run_agent(
         "geo_anchor": geo_anchor,
         "mobility_mode": mobility_mode,
         "output_mode": output_mode,
+        "skip_topic_exploration": skip_topic_exploration,
         "target_words": target_words,
         "min_words": min_words,
         "max_words": max_words,
@@ -255,6 +258,11 @@ Examples:
         choices=["standard", "speechify_export"],
         help="Output mode — 'standard' (155 WPM) or 'speechify_export' (115 WPM, plain narration)",
     )
+    parser.add_argument(
+        "--skip-topic-exploration",
+        action="store_true",
+        help="Skip topic discovery & scoring — use --topic-seed directly as the chosen topic",
+    )
 
     # ── Narrative lens / geo / mobility (optional expansions) ──
     parser.add_argument(
@@ -317,6 +325,7 @@ Examples:
             mobility_mode=args.mobility,
             output_dir=args.output_dir,
             output_mode=args.output_mode,
+            skip_topic_exploration=args.skip_topic_exploration,
         )
 
         # Print summary

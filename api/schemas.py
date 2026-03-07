@@ -31,6 +31,7 @@ class GenerateRequest(BaseModel):
     geo_anchor: Optional[str] = Field(None, description="Physical focal point for spatial cohesion")
     mobility_mode: Optional[str] = Field(None, description="Spatial narrative mode (fixed_site, route_based, multi_site, theater_wide)")
     output_mode: str = Field("standard", description="Output mode — 'standard' (155 WPM) or 'speechify_export' (115 WPM, plain narration)")
+    skip_topic_exploration: bool = Field(False, description="Skip topic discovery & scoring — use topic_seed directly as the chosen topic")
 
 
 # ---------------------------------------------------------------------------

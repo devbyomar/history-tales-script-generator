@@ -157,6 +157,7 @@ class AgentState(BaseModel):
     previous_format_tag: Optional[str] = None
     requested_format_tag: Optional[str] = None
     output_mode: str = "standard"  # "standard" | "speechify_export"
+    skip_topic_exploration: bool = False  # bypass discovery+scoring, use topic_seed directly
 
     # ── Narrative lens / geo / mobility (optional expansions) ───────
     narrative_lens: Optional[str | list[str]] = None
@@ -235,6 +236,7 @@ class GraphState(TypedDict, total=False):
     previous_format_tag: Optional[str]
     requested_format_tag: Optional[str]
     output_mode: str
+    skip_topic_exploration: bool
 
     # Narrative lens / geo / mobility (optional expansions)
     narrative_lens: Optional[str | list[str]]
