@@ -117,7 +117,8 @@ def fact_tighten_node(state: dict[str, Any]) -> dict[str, Any]:
 
     # ── Run post-script validators ──
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
-    rehook_words = int(avg_rehook * (155 / 60))
+    wpm = state.get("words_per_minute", 155)
+    rehook_words = int(avg_rehook * (wpm / 60))
 
     claims_dicts = [
         {"claim_id": c.claim_id, "claim_text": c.claim_text, "named_entities": c.named_entities}

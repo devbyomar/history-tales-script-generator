@@ -26,7 +26,6 @@ from history_tales_agent.state import (
 )
 from history_tales_agent.utils.llm import call_llm
 from history_tales_agent.utils.feedback_memory import load_lessons_prompt
-from history_tales_agent.utils.reference_library import find_best_reference, build_reference_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -60,12 +59,16 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
 
     tone_instructions = get_tone_instructions(tone)
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
-    rehook_words = int(avg_rehook * (155 / 60))  # Words per rehook interval
+    wpm = state.get("words_per_minute", 155)
+    rehook_words = int(avg_rehook * (wpm / 60))  # Words per rehook interval
 
     outline_json = json.dumps(
         [{"section": s.section_name, "description": s.description,
           "target_words": s.target_word_count, "re_hooks": s.re_hooks,
-          "key_beats": s.key_beats}
+          "key_beats": s.key_beats,
+          "midpoint_shift": s.midpoint_shift,
+          "late_pressure": s.late_pressure,
+          "final_thesis": s.final_thesis}
          for s in outline], indent=2,
     )
 
@@ -147,24 +150,6 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         guardrail_feedback = HARD_GUARDRAILS_FEEDBACK.format(issues_text=issues_text)
         user_prompt = guardrail_feedback + "\n\n" + user_prompt
         logger.info("guardrail_feedback_injected", issues=len(validation_issues))
-
-    # ── Inject best-matching reference transcript as style exemplar ──
-    if iteration_count == 0:  # only on the first attempt — retries focus on QC fixes
-        ref = find_best_reference(
-            duration_minutes=video_length,
-            tone=tone,
-            format_tag=format_tag,
-            era=chosen.era if chosen else None,
-            geo=chosen.geo if chosen else None,
-        )
-        if ref:
-            ref_prompt = build_reference_prompt(ref, target_duration_minutes=video_length)
-            user_prompt = ref_prompt + "\n\n" + user_prompt
-            logger.info(
-                "reference_injected",
-                node="ScriptGenerationNode",
-                title=ref.get("title", "?"),
-            )
 
     # ── On retry: inject QC feedback so the LLM knows what to fix ──
     if iteration_count > 0 and qc_report and qc_report.issues:

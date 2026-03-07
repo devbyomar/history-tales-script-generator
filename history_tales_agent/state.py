@@ -111,6 +111,10 @@ class ScriptSection(BaseModel):
     open_loops: list[str] = Field(default_factory=list)
     key_beats: list[str] = Field(default_factory=list)
     rehook_plan: list[RehookPlan] = Field(default_factory=list)
+    # New structural planning fields for YouTube retention
+    midpoint_shift: str = ""  # What fundamentally changes direction (Midpoint Shift section only)
+    late_pressure: str = ""  # Deadline/countdown for final 25% sections
+    final_thesis: str = ""  # Concrete consequence for Close/Final Line sections
 
 
 class QCReport(BaseModel):
@@ -123,6 +127,7 @@ class QCReport(BaseModel):
     retention_score: float = 0.0
     emotional_intensity_score: float = 0.0
     sensory_density_score: float = 0.0
+    narratability_score: float = 0.0
     source_count: int = 0
     institutional_source_present: bool = False
     independent_domains: int = 0
@@ -151,6 +156,7 @@ class AgentState(BaseModel):
     nonlinear_open: bool = True
     previous_format_tag: Optional[str] = None
     requested_format_tag: Optional[str] = None
+    output_mode: str = "standard"  # "standard" | "speechify_export"
 
     # ── Narrative lens / geo / mobility (optional expansions) ───────
     narrative_lens: Optional[str | list[str]] = None
@@ -164,6 +170,7 @@ class AgentState(BaseModel):
     min_words: int = 0
     max_words: int = 0
     rehook_interval: tuple[int, int] = (60, 90)
+    words_per_minute: int = 155  # WPM for rehook calculations (varies by output mode)
 
     # ── Topic discovery & selection ─────────────────────────────────────
     topic_candidates: list[TopicCandidate] = Field(default_factory=list)
@@ -196,6 +203,7 @@ class AgentState(BaseModel):
     qc_report: Optional[QCReport] = None
     emotional_intensity_score: float = 0.0
     sensory_density_score: float = 0.0
+    narratability_score: float = 0.0
     validation_issues: list[str] = Field(default_factory=list)  # from hard guardrails
 
     # ── Internal tracking ───────────────────────────────────────────────
@@ -239,6 +247,7 @@ class GraphState(TypedDict, total=False):
     min_words: int
     max_words: int
     rehook_interval: tuple[int, int]
+    words_per_minute: int
 
     # Topic discovery & selection
     topic_candidates: list[TopicCandidate]
@@ -271,6 +280,7 @@ class GraphState(TypedDict, total=False):
     qc_report: Optional[QCReport]
     emotional_intensity_score: float
     sensory_density_score: float
+    narratability_score: float
     validation_issues: list[str]
 
     # Internal tracking

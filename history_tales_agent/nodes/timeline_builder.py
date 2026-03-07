@@ -92,6 +92,62 @@ def timeline_builder_node(state: dict[str, Any]) -> dict[str, Any]:
         )
         beats.append(beat)
 
+    # ── EMPTY TIMELINE FALLBACK (Change 7) ────────────────────────────
+    # If the LLM returned zero beats or zero twists, that means the
+    # evidence base was too weak to construct a real timeline.
+    # Retry ONCE using only verified claims as anchors.
+    twist_count = sum(1 for b in beats if b.is_twist)
+    if len(beats) == 0 or twist_count == 0:
+        logger.warning(
+            "timeline_empty_or_twistless",
+            beats=len(beats),
+            twists=twist_count,
+            action="retrying_from_claims_only",
+        )
+        # Build a simplified user prompt focused purely on claims
+        fallback_prompt = (
+            f"Build a dramatic timeline for a {video_length}-minute YouTube history video.\n\n"
+            f"Topic: {chosen.title}\nCore POV: {chosen.core_pov}\n"
+            f"Timeline Window: {chosen.timeline_window}\nFormat: {chosen.format_tag}\n\n"
+            f"IMPORTANT: The previous attempt produced zero usable beats.\n"
+            f"Build the timeline STRICTLY from these verified claims — do NOT\n"
+            f"invent events. If only pattern-level evidence exists, frame beats\n"
+            f"as representative moments within documented patterns.\n\n"
+            f"Verified claims:\n{verified_claims}\n\n"
+            f"Create a sequence of timeline beats with at least {max(4, rehook_count // 2)} beats "
+            f"and at least 2 twist points.\n\n"
+            f"For each beat provide: timestamp, event, pov, tension_level (1-10), "
+            f"is_twist (boolean), open_loop, resolves_loop.\n\n"
+            f"Return a JSON array. Return ONLY the JSON array."
+        )
+        try:
+            raw_beats_retry = call_llm_json(TIMELINE_BUILDER_SYSTEM, fallback_prompt, tier="fast")
+            retry_beats = []
+            for rb in raw_beats_retry:
+                beat = TimelineBeat(
+                    timestamp=rb.get("timestamp", ""),
+                    event=rb.get("event", ""),
+                    pov=rb.get("pov", ""),
+                    tension_level=rb.get("tension_level", 5),
+                    is_twist=rb.get("is_twist", False),
+                    open_loop=rb.get("open_loop", ""),
+                    resolves_loop=rb.get("resolves_loop", ""),
+                )
+                retry_beats.append(beat)
+
+            retry_twists = sum(1 for b in retry_beats if b.is_twist)
+            if len(retry_beats) > len(beats):
+                beats = retry_beats
+                logger.info("timeline_retry_success", beats=len(beats), twists=retry_twists)
+            else:
+                logger.warning("timeline_retry_still_empty", beats=len(retry_beats))
+        except Exception as e:
+            logger.error("timeline_retry_failed", error=str(e))
+
+    # Final safety: if still zero beats, inject a structural warning
+    if len(beats) == 0:
+        logger.error("timeline_structurally_empty", action="injecting_warning")
+
     logger.info("timeline_built", beats=len(beats), twists=sum(1 for b in beats if b.is_twist))
 
     # ── Deterministic tension & twist validation ──

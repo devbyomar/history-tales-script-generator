@@ -9,6 +9,7 @@ from history_tales_agent.prompts.templates import QC_SYSTEM, QC_USER
 from history_tales_agent.research.source_registry import validate_source_diversity
 from history_tales_agent.state import Claim, QCReport, SourceEntry
 from history_tales_agent.utils.llm import call_llm_json
+from history_tales_agent.utils.coerce import coerce_to_str_list
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -24,6 +25,7 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
     max_words = state.get("max_words", 2046)
     emotional_score = state.get("emotional_intensity_score", 0)
     sensory_score = state.get("sensory_density_score", 0)
+    narratability_score = state.get("narratability_score", 0)
     sources: list[SourceEntry] = state.get("sources_log", [])
     claims: list[Claim] = state.get("claims", [])
 
@@ -64,9 +66,10 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
         logger.error("qc_failed", error=str(e))
         qc_result = {"overall_pass": False, "issues": [f"QC error: {str(e)}"], "recommendations": []}
 
-    # Build QC report
-    issues = qc_result.get("issues", [])
-    recommendations = qc_result.get("recommendations", [])
+    # Build QC report — normalise LLM output that may return dicts
+    # instead of plain strings for issues / recommendations.
+    issues = coerce_to_str_list(qc_result.get("issues", []))
+    recommendations = coerce_to_str_list(qc_result.get("recommendations", []))
 
     # Programmatic checks
     hard_issues = []  # Block pass
@@ -91,6 +94,41 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
         hard_issues.append(f"Sensory density score {sensory_score} below 60 threshold")
     elif sensory_score < 70:
         soft_issues.append(f"Sensory density score {sensory_score} below 70 (acceptable but could improve)")
+
+    if narratability_score < 60:
+        hard_issues.append(f"Narratability score {narratability_score} below 60 threshold — script has too many poetic/literary patterns for spoken narration")
+    elif narratability_score < 70:
+        soft_issues.append(f"Narratability score {narratability_score} below 70 — some literary patterns detected that may sound unnatural when narrated")
+
+    # --- Historical integrity checks (Change 23 — severity tier 1) ---
+    # Check timeline structural integrity
+    beats = state.get("timeline_beats", [])
+    if len(beats) == 0:
+        hard_issues.append(
+            "Timeline has zero beats — script may lack structural grounding. "
+            "Evidence base may be insufficient for this topic/format combination."
+        )
+
+    # Claims-log / script topic coherence check
+    if claims:
+        # Check that at least some claim entities appear in the script
+        claim_entities: set[str] = set()
+        for c in claims:
+            for ent in getattr(c, "named_entities", []) or []:
+                if len(ent) > 3:
+                    claim_entities.add(ent.lower())
+        script_lower = script.lower()
+        matched = sum(1 for e in claim_entities if e in script_lower)
+        if claim_entities and matched == 0:
+            hard_issues.append(
+                "Claims log / script topic mismatch: zero claim entities appear "
+                "in the final script. The claims may be from a different topic."
+            )
+        elif claim_entities and matched < len(claim_entities) * 0.15:
+            soft_issues.append(
+                f"Only {matched}/{len(claim_entities)} claim entities found in script. "
+                f"Claims log may be partially mismatched."
+            )
 
     # Check for disclaimer — flexible matching
     disclaimer_phrases = [
@@ -118,6 +156,7 @@ def quality_check_node(state: dict[str, Any]) -> dict[str, Any]:
         retention_score=0.0,
         emotional_intensity_score=emotional_score,
         sensory_density_score=sensory_score,
+        narratability_score=narratability_score,
         source_count=len(sources),
         institutional_source_present=institutional_present,
         independent_domains=diversity["unique_domains"],

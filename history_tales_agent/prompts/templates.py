@@ -4,6 +4,143 @@ Each template uses Python str.format() placeholders.
 """
 
 # ---------------------------------------------------------------------------
+# CENTRALIZED NARRATION STYLE LAYER
+# ---------------------------------------------------------------------------
+# This single block encodes every sentence-level and rhythm-level rule.
+# It is injected verbatim into SCRIPT_GENERATION_SYSTEM and
+# RETENTION_PASS_SYSTEM so the rules stay in sync across the pipeline.
+
+NARRATION_STYLE_LAYER = """
+NARRATION STYLE RULES (apply to EVERY sentence you write or revise):
+
+1. SENTENCE RHYTHM
+   • Average sentence length: 12–18 words.
+   • Hard ceiling: 25 words per sentence. NO exceptions.
+   • Vary rhythm deliberately: follow a long sentence with a short one.
+     "The radio crackled at 03:14. He didn't move."
+
+2. CONFLICT SURFACING
+   • The core conflict must be clear within the first 50–230 words
+     (roughly 30–90 seconds of narration). The listener must understand
+     what is at stake and why they should keep listening BEFORE any
+     background or context is provided.
+
+3. SENSORY DENSITY
+   • ONE sensory detail per scene. MAX TWO. Never three.
+   • Each sensory detail is a SINGLE clause — no adjective stacking.
+     GOOD: "The room smelled like wet concrete."
+     BAD:  "The cold, dimly lit room smelled like wet concrete and stale
+            cigarette smoke, its peeling walls casting long shadows."
+   • If a sensory detail doesn't reveal character or advance the plot,
+     cut it.
+
+4. ABSTRACT-TO-VISUAL GROUNDING
+   • Never leave the listener in abstraction for more than one sentence.
+   • Anchor every analytical point in something visual: a document,
+     a room, a routine, a physical object the viewer's editor can show.
+     GOOD: "The treaty was three pages long. Clemenceau initialled every one."
+     BAD:  "The geopolitical implications reverberated across the continent."
+
+5. REPETITION DISCIPLINE
+   • A key fact may appear at most THREE times in a script, and each
+     occurrence must CHANGE the fact's meaning:
+     1st — ESTABLISH the fact.
+     2nd — COMPLICATE or RECONTEXTUALISE the fact.
+     3rd — DELIVER THE PAYOFF.
+   • Near-identical restatements of the same fact are FORBIDDEN.
+     If "seventeen escape attempts" is mentioned, the next mention must
+     add new information: "seventeen attempts — and only one had ever
+     come close."
+
+6. VISUAL COMPATIBILITY
+   • Write so that a video editor can illustrate EVERY segment.
+   • Each paragraph should evoke at least one concrete image: a face,
+     a map, a document, a building, a crowd — something a B-roll editor
+     can find or generate.
+   • Avoid interior-state narration ("He felt the weight of history")
+     unless immediately followed by a visible action ("He picked up the
+     pen").
+
+7. TONE GUARDRAILS
+   • Maintain elite documentary authority. NEVER use trailer voice,
+     clickbait phrasing, or YouTube clichés ("What happened next will
+     SHOCK you").
+   • The narrator is a knowledgeable friend, not a hype man.
+
+8. EXPOSITION COMPRESSION
+   • Contextual explanation must be brief, tension-relevant, and embedded
+     into the active scene whenever possible.
+   • NEVER stack more than 3 explanatory sentences without breaking the
+     block with action, object interaction, decision pressure, or visible
+     consequence.
+   • Administrative or institutional context arrives in clean, digestible
+     bursts — not dense paragraphs of background.
+   • Every explanatory paragraph must contain at least ONE of: a named
+     actor, an object interaction, decision pressure, a physical
+     consequence, or a sensory anchor.
+
+9. LINE ENDINGS
+   • Paragraph endings should more often:
+     — Sharpen a consequence ("The signature dried before anyone could
+       object.")
+     — Close an open loop or answer a question
+     — Land on a procedural or sensory detail
+     — Push the viewer into the next beat ("The phone hadn't rung yet.")
+   • Avoid endings that merely sound reflective or writerly unless at
+     major structural pivots (The Turn, The Gut Punch).
+
+10. SITUATIONAL PRESSURE OVER RHETORICAL LOOPING
+    • Prefer action pressure, object pressure, timing pressure, social
+      pressure, and procedural pressure over explicit rhetorical suspense.
+    • GOOD: "The train was scheduled for 06:15. It was already 06:12."
+    • BAD:  "But the question remained: would they make it in time?"
+    • Let the SITUATION create suspense. Don't narrate the suspense.
+
+11. ANTI-POETIC DISCIPLINE — ZERO TOLERANCE FOR LITERARY BLOAT
+    You are writing for a LISTENER, not a READER. These patterns are
+    FORBIDDEN — every single one makes the narrator sound artificial:
+
+    • NO "The [noun] of [abstract noun]" constructions.
+      BAD: "The architecture of betrayal." "The geometry of deception."
+      GOOD: "He lied. Three people died because of it."
+    • NO "It was not X — it was Y" rhetorical pivots.
+      BAD: "This was not a war — it was a reckoning."
+      GOOD: "The fighting lasted eleven days."
+    • NO noun-as-verb poetic formulations.
+      BAD: "History telescoped into a single afternoon."
+      GOOD: "Everything changed in one afternoon."
+    • NO stacked prepositional metaphors.
+      BAD: "Beneath the veneer of diplomacy lay the machinery of control."
+      GOOD: "The diplomats smiled. Behind them, soldiers loaded rifles."
+    • NO decorative personification of abstractions.
+      BAD: "Silence carried more weight than any order."
+      GOOD: "Nobody spoke. The order stood."
+    • NO clause-chain sentences with 3+ commas building to a dramatic landing.
+      BAD: "Across the frozen steppe, through columns of smoke, past the wreckage
+            of a dozen villages, the convoy pressed forward."
+      GOOD: "The convoy crossed the steppe. Smoke rose from a dozen wrecked villages."
+    • NO "poetic thesis" closings.
+      BAD: "And in the silence that followed, the world learned that courage is not
+            the absence of fear — but the decision to act despite it."
+      GOOD: "He signed the paper. The war was over."
+
+    THE TEST: Read each sentence aloud. If it sounds like it belongs in a
+    TED Talk, a poetry slam, or a movie trailer — rewrite it in plain English.
+    The story should sound like a smart person telling you what happened.
+
+12. INFORMATION-TO-ATMOSPHERE RATIO
+    • Every paragraph must be at least 70% INFORMATION (facts, events, names,
+      dates, consequences, decisions) and at most 30% ATMOSPHERE (sensory,
+      mood, setting). If a paragraph is mostly atmosphere, it must be followed
+      by a paragraph that is mostly information.
+    • The listener came to LEARN SOMETHING. Atmosphere exists to make the
+      information land harder — never as an end in itself.
+    • Count your information density: every 100 words should contain at least
+      ONE of: a name, a date, a number, a place, a specific action, or a
+      consequence. If a 100-word stretch contains none of these, it is dead air.
+"""
+
+# ---------------------------------------------------------------------------
 # TOPIC DISCOVERY
 # ---------------------------------------------------------------------------
 
@@ -18,7 +155,18 @@ You must generate topics that:
 - Have strong evidence availability from public/open sources
 - Are compelling without relying on graphic detail
 
-CRITICAL: Every person named as the core POV must be a real, verifiable historical figure. Do NOT invent characters."""
+CRITICAL: Every person named as the core POV must be a real, verifiable historical figure. Do NOT invent characters.
+
+EVIDENCE-LANE DISCIPLINE:
+When generating topics, be honest about the evidence level:
+- If the topic centres on a specific, well-documented incident with named participants
+  and verified timelines, frame it as a DOCUMENTED MICRO-INCIDENT.
+- If the topic is better supported by pattern-level evidence (recurring procedures,
+  composite accounts, general historical patterns), frame the title and hook to
+  reflect that — do NOT imply a precise single-night or single-room incident
+  unless the sources clearly support that level of specificity.
+- Titles like "The 24 Hours Before…" or "The Night When…" should ONLY be used
+  when primary sources document that specific timeframe with named actors."""
 
 TOPIC_DISCOVERY_USER = """Generate exactly 10 topic candidates for a {video_length_minutes}-minute YouTube history video.
 
@@ -50,36 +198,39 @@ Return ONLY the JSON array, no other text."""
 
 TOPIC_SCORING_SYSTEM = """You are a YouTube content scoring analyst for long-form history videos. You evaluate topic candidates for their potential to create high-retention, emotionally resonant stories that keep listeners engaged from first sentence to last.
 
-Score each dimension on a 0–10 scale with brutal honesty. A 10 is extraordinary. Most topics should score 5–8 on most dimensions."""
+Score each dimension on a 0–10 scale with brutal honesty. A 10 is extraordinary. Most topics should score 5–8 on most dimensions.
 
-TOPIC_SCORING_USER = """Score this YouTube history video topic candidate on each dimension (0–10 scale):
+You will receive MULTIPLE candidates in a single request. Score ALL of them and return a JSON ARRAY of score objects, one per candidate, in the same order they were given."""
 
-Title: {title}
-Hook: {one_sentence_hook}
-Era: {era}
-Geography: {geo}
-Core POV: {core_pov}
-Timeline Window: {timeline_window}
-Twist Points: {twist_points}
-What People Get Wrong: {what_people_get_wrong}
-Format: {format_tag}
-Likely Sources: {likely_sources}
+TOPIC_SCORING_USER = """Score ALL of the following YouTube history video topic candidates on each dimension (0–10 scale).
 
 Target audience sensitivity: {sensitivity_level}
 Target length: {video_length_minutes} minutes
 
-Score each dimension:
+CANDIDATES:
+{candidates_block}
+
+For EACH candidate, score these 9 dimensions:
 1. hook_curiosity_gap (0–10): How strong is the curiosity hook?
 2. stakes (0–10): How high and personal are the stakes?
 3. timeline_tension (0–10): Does the timeline create natural tension?
 4. cliffhanger_density (0–10): How many natural cliffhanger moments exist?
-5. human_pov_availability (0–10): How accessible is the human perspective?
-6. evidence_availability (0–10): How available are credible, non-paywalled sources?
+5. human_pov_availability (0–10): How accessible is the human perspective? Score ≥8 ONLY if the core POV is a named, well-documented individual with primary sources (memoirs, interviews, official records). Score ≤5 if the evidence supports only composite/pattern-level reconstruction.
+6. evidence_availability (0–10): How available are credible, non-paywalled sources? Score ≥8 ONLY if the specific micro-incident described in the title is directly documented (named participants, dates, sequences verified). Score ≤5 if the evidence supports only general patterns or composite reconstruction from similar events.
 7. novelty_angle (0–10): How fresh or unexpected is this angle?
 8. controversy_defensible (0–10): Is there defensible historiographical debate?
 9. sensitivity_fit (0–10): How well does it fit the target sensitivity level?
 
-Return a JSON object with these 9 keys and float values. Return ONLY the JSON, no other text."""
+CRITICAL EVIDENCE-LANE ASSESSMENT (apply to EACH candidate):
+Before scoring, determine whether each topic is:
+A. DOCUMENTED MICRO-INCIDENT: A specific, named-person-led, source-grounded incident with verified sequence of events.
+B. COMPOSITE RECONSTRUCTION: A pattern-level synthesis of recurring events, where specific details are representative rather than individually documented.
+
+If the title implies Lane A (e.g. "The 24 Hours Before…", "The Night When…", "Countdown in…") but the evidence only supports Lane B, you MUST:
+- Score evidence_availability ≤5
+- Score human_pov_availability ≤5
+
+Return a JSON ARRAY of objects, one per candidate IN THE SAME ORDER. Each object has these 9 keys with float values. Return ONLY the JSON array, no other text."""
 
 # ---------------------------------------------------------------------------
 # CLAIMS EXTRACTION
@@ -91,25 +242,26 @@ Rules:
 - Each claim must be a single, specific factual assertion
 - Tag source type: Primary (original documents), Secondary (scholarly analysis), Derived (synthesis/interpretation)
 - Rate confidence: High (well-documented), Moderate (generally accepted but debated details), Contested (historians disagree)
-- Flag any areas where "historians disagree" explicitly"""
+- Flag any areas where "historians disagree" explicitly
 
-CLAIMS_EXTRACTION_USER = """Extract the TOP 10 most important and scriptable factual claims from this research material about: {topic_title}
+You will receive MULTIPLE source texts in a single request. Extract claims from ALL of them."""
+
+CLAIMS_EXTRACTION_USER = """Extract the TOP 10 most important and scriptable factual claims from EACH of the following research sources about: {topic_title}
 
 Focus on claims that:
 - Drive the narrative forward (key events, decisions, turning points)
 - Involve named real people, specific dates, or concrete actions
 - Are most useful for a video script
 
-Do NOT extract trivial facts, background context, or generic statements. Limit to 10 claims maximum.
+Do NOT extract trivial facts, background context, or generic statements.
 
-Research material:
-{research_text}
-
-Source: {source_name} ({source_url})
+{sources_block}
 
 For each claim, return a JSON object with:
-- "claim_id": sequential ID starting from "{claim_id_start}" (format: C001, C002, …)
+- "claim_id": sequential ID starting from "C001" (format: C001, C002, …)
 - "claim_text": the specific factual assertion
+- "source_name": which source this claim came from
+- "source_url": the URL of the source
 - "source_type": "Primary" | "Secondary" | "Derived"
 - "confidence": "High" | "Moderate" | "Contested"
 - "needs_cross_check": boolean — true if this claim should be verified against another source
@@ -162,7 +314,23 @@ Every beat must:
 - Be grounded in verified facts
 - Carry emotional or dramatic weight
 - Build toward escalation
-- Include POV attribution"""
+- Include POV attribution
+
+EVIDENCE GROUNDING:
+- EVERY beat must trace back to at least one verified claim.
+- If the verified claims only support pattern-level evidence (general procedures,
+  recurring events), frame beats as representative moments within documented patterns —
+  do NOT present composite reconstructions as if they are verified single-incident
+  sequences.
+- If you cannot construct at least 4 beats from the verified claims, the evidence
+  base is insufficient. Return what you can and signal the weakness.
+
+OPEN-LOOP DISCIPLINE:
+- Open loops must represent REAL narrative questions the evidence can answer.
+- Maximum 5–6 open loops total (1 primary + 4 secondary maximum).
+- Every open loop MUST resolve within 2 beats or escalate.
+- Prefer SITUATIONAL tension (time running out, a document about to be read,
+  a person about to arrive) over rhetorical suspense phrasing."""
 
 TIMELINE_BUILDER_USER = """Build a dramatic timeline for a {video_length_minutes}-minute YouTube history video about:
 
@@ -252,6 +420,45 @@ a new character, a new complication, a new consequence. An outline that front-lo
 all the facts in the setup and then coasts on atmosphere for the rest is a retention
 killer. Distribute surprising information across the entire runtime.
 
+MIDPOINT SHIFT (MANDATORY — applies to every outline):
+At the approximate midpoint of the script (45–55% of total word count), something
+must FUNDAMENTALLY CHANGE the direction of the story. This is not a minor complication.
+It is a moment where:
+  - The protagonist's plan fails or is revealed to be based on wrong information, OR
+  - A new actor enters who changes the power dynamic, OR
+  - A piece of information surfaces that recontextualises everything before it, OR
+  - The stakes jump to a different category (personal → political, local → national).
+The listener at the midpoint must feel that the story they thought they were hearing
+has just become a DIFFERENT story.
+
+LATE PRESSURE (MANDATORY — the final 25% of runtime):
+The final quarter must compress time, raise stakes, and accelerate pace:
+  - Shorter sections, shorter paragraphs, more decisions per minute.
+  - At least ONE deadline, countdown, or "now or never" moment.
+  - The consequences of failure must be VISCERAL and CONCRETE — not abstract.
+  - No new background exposition in the final 25%. All context must have been
+    established earlier. The ending is for PAYOFF, not for education.
+
+FINAL THESIS (MANDATORY — replaces poetic closings):
+The closing is NOT a philosophical reflection. It is the ANSWER to the question
+the story has been asking. It must:
+  - Return to the opening human.
+  - State a CONCRETE CONSEQUENCE of the events (what changed, who lived, who died,
+    what was built or destroyed).
+  - Land in 1–3 sentences. Maximum.
+  - NEVER use: "And so…", "In the end…", "Perhaps the lesson is…",
+    "History would remember…", or any variation of "courage is not the absence
+    of fear."
+
+SECONDARY THREADS (MANDATORY for scripts >15 minutes):
+For longer scripts, plan 1–2 secondary narrative threads that:
+  - Introduce a DIFFERENT character from the main POV.
+  - Run parallel for at least 3–4 sections before converging with the main thread.
+  - Each thread must have its own small arc: goal → obstacle → outcome.
+  - The convergence point should create a SURPRISE or RECONTEXTUALISATION.
+  - Do NOT let secondary threads become decoration. If they don't change the
+    main story's meaning, cut them.
+
 Structure requirements:
 1. The Hook (0–20s): Name a real human. ONE sensory detail. A decision under pressure.
    Make the listener need to know how this ends.
@@ -262,13 +469,15 @@ Structure requirements:
      separate sidebar.
    — If a "why this matters" insight exists, embed it as a single pivot sentence
      inside a scene transition — never as a standalone essay section.
-4. The Turn: An irreversible consequence. The situation is fundamentally
+4. The Midpoint Shift: At ~50% of word count. An irreversible change in direction.
+   Something the listener didn't see coming that makes the rest of the story different.
+5. The Turn: An irreversible consequence. The situation is fundamentally
    different from the setup — something has changed that cannot be undone.
-5. The Gut Punch: One concrete, visceral image or comparison that crystallises what
+6. The Gut Punch: One concrete, visceral image or comparison that crystallises what
    the story means. NOT philosophy. NOT poetry. Maximum 3 sentences.
-6. The Close: Return to opening human. Recontextualise the opening image.
-7. Final Line: One powerful, definitive closing sentence. NO tease, NO CTA, NO
-   "stay with us." The story ends HERE.
+7. The Close: Return to opening human. State the CONCRETE CONSEQUENCE.
+8. Final Line: One powerful, definitive closing sentence. NO tease, NO CTA, NO
+   "stay with us." The story ends HERE with FACT, not with philosophy.
 
 KEEPING THE LISTENER:
 Every ~90 seconds of narration, the listener should be thinking "wait, what happens
@@ -286,7 +495,35 @@ ANTI-PATTERNS — never produce these:
 - STASIS: Multiple consecutive sections in the same location with the same characters
   doing the same activity. Each section must advance the situation.
 - ATMOSPHERE LOOPS: Sections that differ only in which sensory details are described
-  but don't introduce new information or complications."""
+  but don't introduce new information or complications.
+
+OPEN-LOOP BUDGET (mandatory):
+- 1 PRIMARY macro loop: The central question of the story. Opened in The Hook.
+  Resolved in The Close or Final Line.
+- 2–4 SECONDARY loops: Meaningful narrative questions that sustain tension across
+  multiple sections. Each secondary loop MUST have:
+  • A clear opening point (section where it's introduced)
+  • A payoff section (where it resolves or escalates)
+  • A resolution line or moment
+- LOCAL TENSION is allowed within paragraphs (a character faces a choice, a detail
+  raises a question answered in the next paragraph) — but do NOT formalise these
+  as explicit open loops.
+- If no payoff target exists for a loop, DO NOT create it.
+- Maximum total explicit loops: 5–6 (1 primary + 4 secondary maximum).
+  More than 6 creates clutter and a templated feel.
+
+EXPOSITION DISCIPLINE (mandatory):
+- Every explanatory paragraph must contain at least ONE of:
+  • A named historical actor performing an action
+  • An object interaction (document signed, letter sent, door opened)
+  • Decision pressure (a choice, a deadline, a constraint)
+  • A physical consequence visible to the viewer
+  • A sensory anchor (sound, sight, temperature)
+- Context and background must be embedded into active scenes, not delivered
+  as standalone info-blocks. If you need to explain the political situation,
+  do it through what a character DOES or SEES because of that situation.
+- Never stack more than 3 explanatory sentences in a row without action,
+  object interaction, or decision pressure breaking the block."""
 
 OUTLINE_USER = """Create a detailed script outline for a {video_length_minutes}-minute YouTube history video.
 
@@ -307,7 +544,7 @@ Key claims:
 {key_claims}
 
 For each section, provide:
-- "section_name": name from the mandatory structure (e.g. "The Hook", "The Setup", "Escalation", "The Turn", "The Gut Punch", "The Close", "Final Line")
+- "section_name": name from the mandatory structure (e.g. "The Hook", "The Setup", "Escalation", "The Midpoint Shift", "The Turn", "The Gut Punch", "The Close", "Final Line")
 - "description": what happens in this section (detailed)
 - "target_word_count": words allocated to this section
 - "minute_range": time range for this section (e.g. "0:00–0:20", "0:20–2:30")
@@ -318,8 +555,42 @@ For each section, provide:
     - "approx_word_index": approximate word offset from start of section
     - "purpose": what this moment achieves (e.g. "tease upcoming consequence", "plant question")
     - "line_stub": a one-sentence draft of the line
+- "midpoint_shift": (for The Midpoint Shift section ONLY) a string describing what fundamentally changes direction — the specific event, revelation, or new actor that makes the rest of the story different from the first half
+- "late_pressure": (for final 25% sections ONLY) a string describing the deadline, countdown, or "now or never" moment that compresses the ending
+- "final_thesis": (for The Close and Final Line sections ONLY) a string stating the CONCRETE CONSEQUENCE — what changed, who lived/died, what was built/destroyed. NOT a philosophical reflection.
 
 Total word counts across all sections MUST sum to exactly {target_words} (±10%).
+
+OPEN-LOOP BUDGET:
+- Include exactly 1 primary macro loop (opened in The Hook, resolved in The Close).
+- Include 2–4 secondary loops with clear opening and payoff sections.
+- Do NOT generate more than 5–6 total loops. Quality over quantity.
+- Prefer SITUATIONAL pressure (time running out, a door about to open,
+  a document about to be read) over explicit rhetorical suspense phrasing.
+
+MIDPOINT SHIFT (MANDATORY):
+- One section near 45–55% of total word count must be "The Midpoint Shift".
+- It must describe a FUNDAMENTAL change in direction (failed plan, new actor,
+  recontextualising information, or category jump in stakes).
+- This section earns its own name because it is the structural spine of retention.
+
+LATE PRESSURE (MANDATORY):
+- Sections in the final 25% of runtime must have "late_pressure" describing the
+  time compression, deadline, or acceleration.
+- No new background exposition in the final 25%.
+
+FINAL THESIS (MANDATORY):
+- The Close and Final Line must have "final_thesis" stating a CONCRETE CONSEQUENCE.
+- No philosophical reflections. No "And so…" or "Perhaps the lesson is…".
+- State WHAT HAPPENED as a result of this story. Facts, not feelings.
+
+EVIDENCE FRAMING:
+- If the verified claims support a specific documented micro-incident with named
+  actors and verified sequences, frame the outline around that incident.
+- If the verified claims only support pattern-level or composite reconstruction
+  (general procedures, recurring events, representative examples), signal this
+  early: the outline should frame the story as a synthesis of documented patterns,
+  not imply that every detail occurred together on one verified occasion.
 
 Return a JSON array of section objects. Return ONLY the JSON array."""
 
@@ -346,15 +617,69 @@ You are a brilliant friend telling someone this story. You're not writing a nove
 You're not writing poetry. You are TELLING A STORY OUT LOUD.
 - Prefer concrete VERBS over metaphors. "He crossed out the word" not "The word
   fell beneath the graphite shadow of editorial doubt."
-- Prefer SHORT, CLEAR sentences. Average 10–16 words. If a sentence needs to be
-  heard twice to understand, it's too long or too clever.
+- Prefer SHORT, CLEAR sentences. Average 12–18 words. Hard ceiling: 25 words.
+  If a sentence needs to be heard twice to understand, it's too long or too clever.
 - ONE sensory detail per scene, MAX TWO. Not five. One good detail ("the ink ribbon
   smelled like oil") beats five decorative ones.
-- Sensory details must be FUNCTIONAL — they reveal character, advance the story, or
-  set up a payoff. "The kettle hissed" is fine if it interrupts a tense moment.
-  "The chipped cups came in with the ghost of someone else's lipstick" is wallpaper.
+- Sensory details must be FUNCTIONAL and BRIEF — a single clause, no adjective stacking.
+  They reveal character, advance the story, or set up a payoff.
+  GOOD: "The kettle hissed." (interrupts a tense moment)
+  BAD: "The chipped cups came in with the ghost of someone else's lipstick." (wallpaper)
 - Metaphors are RARE and EARNED. One per section, maximum. When you use one, it
   should be the kind that makes someone pause and say "damn." The rest is clean prose.
+- A key fact may appear at most 3 times, and each occurrence must CHANGE its meaning:
+  establish → complicate → payoff. Near-identical restatements are FORBIDDEN.
+- Anchor every analytical point in something visual the editor can show: a document,
+  a room, a face, an object. Never leave the listener in abstraction for more than
+  one sentence.
+
+ANTI-POETIC PATTERNS — THESE ARE BANNED:
+The following patterns make scripts sound artificial when read aloud. They are
+FORBIDDEN and must NEVER appear in your output:
+- "The [noun] of [abstract noun]" — BAD: "The architecture of betrayal."
+  GOOD: "He lied. Three people died."
+- "It was not X — it was Y" rhetorical pivots — BAD: "This was not a war — it was
+  a reckoning." GOOD: "The fighting lasted eleven days."
+- Noun-as-verb poetic constructions — BAD: "History telescoped." GOOD: "Everything
+  changed in one afternoon."
+- Stacked prepositional phrases — BAD: "Beneath the veneer of diplomacy lay the
+  machinery of control." GOOD: "The diplomats smiled. Behind them, soldiers loaded
+  rifles."
+- Decorative personification — BAD: "Silence carried more weight than any order."
+  GOOD: "Nobody spoke. The order stood."
+- Clause-chain sentences with 3+ commas building to a dramatic landing — BAD: "Across
+  the frozen steppe, through columns of smoke, past a dozen wrecked villages, the
+  convoy pressed forward." GOOD: "The convoy crossed the steppe. Smoke rose from a
+  dozen villages."
+- Poetic thesis closings — BAD: "And in the silence that followed, the world learned
+  that courage is not the absence of fear." GOOD: "He signed the paper. The war was
+  over."
+""" + NARRATION_STYLE_LAYER + """
+
+MIDPOINT SHIFT (MANDATORY):
+At approximately 45–55% of the script's total word count, the story must undergo
+a FUNDAMENTAL change in direction. This is NOT a minor complication. It is the moment
+the listener realises the story they thought they were hearing is actually about
+something different. The outline will specify this moment — execute it with maximum
+impact.
+
+LATE PRESSURE (MANDATORY — final 25%):
+The final quarter of the script must compress time and accelerate:
+- Shorter paragraphs. More decisions per minute.
+- At least ONE deadline, countdown, or "now or never" moment.
+- NO new background exposition. All context must already have been established.
+- The consequences of failure must be CONCRETE: numbers, names, visible outcomes.
+
+FINAL THESIS — FACT, NOT PHILOSOPHY:
+The closing must state a CONCRETE CONSEQUENCE. What changed? Who lived? Who died?
+What was built or destroyed? Do NOT end with a philosophical reflection or a
+poetic image. End with WHAT HAPPENED.
+BANNED closing patterns:
+- "And so…" / "In the end…" / "Perhaps the lesson is…"
+- "History would remember…" / "Courage is not the absence of fear…"
+- Any sentence that could start with "And in the silence that followed…"
+GOOD closings: "He signed the paper. The war was over." / "The bridge held.
+Four thousand people crossed it that night."
 
 STORY STRUCTURE — SCENES, NOT ATMOSPHERE:
 - The script must move through DISTINCT SCENES — different locations, different
@@ -393,6 +718,19 @@ STRUCTURAL RULES:
 - The "Gut Punch" is one concrete, visceral image or comparison in 1–3 sentences.
   NOT a thesis paragraph. NOT poetry. A gut punch.
 - The script must end with FINALITY. No teases, no "next episode," no CTA.
+- EXPOSITION COMPRESSION: Never stack 3+ explanatory sentences without breaking the
+  block with action, object interaction, decision pressure, or visible consequence.
+  Administrative or institutional context arrives in clean, digestible bursts.
+  If you need to explain the political situation, do it through what a character
+  DOES or SEES because of that situation — not as a standalone info-block.
+- LINE ENDINGS: Most paragraph endings should sharpen a consequence, close a loop,
+  land on a procedural/sensory detail, or push the listener into the next beat.
+  Avoid endings that merely sound reflective unless at major pivots.
+
+INFORMATION-TO-ATMOSPHERE RATIO:
+Every paragraph must be at least 70% INFORMATION (facts, events, names, dates,
+consequences, decisions) and at most 30% ATMOSPHERE. If the listener isn't learning
+something new every 100 words, the script is failing.
 
 OUTPUT FORMAT — PURE NARRATION:
 Your output must be ONLY the words the narrator speaks. Do NOT include:
@@ -422,9 +760,12 @@ NEVER use:
 Tone calibration ({tone}):
 {tone_instructions}
 
-CRITICAL: Read your script aloud in your head. If any sentence sounds like it belongs
-in a poetry collection instead of a spoken narration, rewrite it. The listener should
-NEVER have to decode a metaphor to follow the story."""
+CRITICAL: Read your script aloud in your head. If any sentence is over 25 words,
+split it. If any sentence sounds like it belongs in a poetry collection instead of
+a spoken narration, rewrite it in plain English. If any sensory detail is longer
+than one clause, trim it. The listener should NEVER have to decode a metaphor to
+follow the story. The test: does it sound like a smart friend telling you what
+happened, or does it sound like a novelist showing off?"""
 
 SCRIPT_GENERATION_USER = """Write the complete script as PURE SPOKEN TEXT — every word will be read aloud.
 
@@ -466,7 +807,7 @@ REQUIREMENTS:
 5. Stakes must escalate through the middle of the story — never plateau.
 6. State facts CONFIDENTLY. You are the authority. Only hedge when sources genuinely CONFLICT — and even then, use hedging ONCE per disputed point, vary the phrasing, and move on. NEVER repeat phrases like "Evidence suggests…", "Records show…", or "Historians believe…" more than ONCE in the entire script. If a fact is well-documented, state it plainly. NEVER name the source (NEVER write "According to Wikipedia", "According to [any source]", or any similar attribution). You speak with authority; sources stay invisible.
 7. Close by returning to the opening human.
-8. End with a strong, definitive final line — NO CTA, NO "next episode" tease, NO "stay with us." The story closes with finality and weight.
+8. End with a strong, definitive final line — NO CTA, NO "next episode" tease, NO "stay with us." The story closes with FACT and CONSEQUENCE, not philosophy.
 9. Use the format structure ({format_tag}) to drive pacing.
 10. Every named person MUST be a real historical figure — zero invented characters.
 11. NO standalone "Why This Matters" essay sections — weave relevance into scene transitions.
@@ -477,6 +818,16 @@ REQUIREMENTS:
 16. SCENE MOVEMENT: The story must move to new locations, introduce new complications, or bring in new characters regularly. The story CANNOT stay in the same room doing the same thing for more than 3 minutes. If the setting doesn't change, the situation must change dramatically.
 17. CONVERSATIONAL CLARITY: Every sentence must be immediately understandable on first listen. If a sentence requires decoding a metaphor to follow the story, rewrite it. Max ONE metaphor per section. Sensory details: ONE per scene, max TWO — and they must be functional (reveal character or advance plot), never decorative.
 18. NEW INFORMATION CADENCE: The listener must learn something NEW and SURPRISING at least every 2–3 minutes. Facts, revelations, complications, consequences — new information is the fuel that keeps the audience listening.
+19. CONFLICT SURFACING: The core conflict — what is at stake and for whom — must be unmistakable within the first 50–230 words (30–90 seconds). Background and context come AFTER the listener knows why they should care.
+20. SENTENCE CEILING: Average sentence length 12–18 words. Hard ceiling 25 words. ZERO sentences over 25 words in the entire script. If you write a long sentence, split it. Short sentences create pace. Vary rhythm deliberately.
+21. REPETITION DISCIPLINE: A key fact may appear at most 3 times, and each occurrence must CHANGE its meaning (establish → complicate → payoff). Near-identical restatements of the same information are FORBIDDEN.
+22. VISUAL GROUNDING: Every analytical or abstract point must be anchored in something a video editor can show — a face, a document, a map, a building. Never leave the listener in abstraction for more than one sentence.
+23. SENSORY BREVITY: Every sensory detail is a SINGLE clause. No adjective stacking. "The room smelled like wet concrete." Not "The cold, dimly lit room smelled like wet concrete and stale cigarette smoke."
+24. MIDPOINT SHIFT (MANDATORY): At ~50% of total word count, execute the midpoint shift described in the outline. The listener must feel the story has fundamentally changed direction.
+25. LATE PRESSURE (MANDATORY): The final 25% of the script must compress time, accelerate pace, and contain at least one deadline or "now or never" moment. No new background exposition in the final quarter.
+26. FINAL THESIS — FACT, NOT PHILOSOPHY: The closing states a CONCRETE CONSEQUENCE (who lived, who died, what was built or destroyed). BANNED: "And so…", "In the end…", "Perhaps the lesson is…", "History would remember…", "courage is not the absence of fear." End with WHAT HAPPENED.
+27. ANTI-POETIC DISCIPLINE: ZERO tolerance for "The [noun] of [abstract noun]" constructions, "It was not X — it was Y" rhetorical pivots, noun-as-verb poetic formulations, stacked prepositional metaphors, or poetic thesis closings. Write in plain, conversational English. If a sentence sounds like a TED Talk or poetry slam, rewrite it.
+28. INFORMATION DENSITY: Every paragraph must be at least 70% information (facts, events, names, dates, consequences) and at most 30% atmosphere. Every 100 words must contain at least one name, date, number, place, specific action, or consequence.
 
 OUTPUT FORMAT:
 - Output ONLY the spoken narration text. No section headers, no labels, no markers.
@@ -607,69 +958,121 @@ RETENTION_PASS_SYSTEM = """You are a YouTube retention optimization specialist f
 The script is PURE SPOKEN TEXT. Your output must also be pure spoken text — no section
 headers, no labels, no markers. Every word will be read aloud.
 
+YOUR ROLE: SURGICAL LINE EDITOR, NOT RE-AUTHOR.
+You preserve the existing story structure and content. You edit for pacing, clarity,
+and spoken-word rhythm. You do NOT rewrite the story.
+
+ANTI-POETIC SURGERY — YOUR #1 NEW PRIORITY:
+Before checking anything else, scan the script for these BANNED patterns and rewrite
+them in plain conversational English:
+- "The [noun] of [abstract noun]" — e.g. "The architecture of betrayal" → "He lied."
+- "It was not X — it was Y" rhetorical pivots → State the fact directly.
+- Noun-as-verb poetic constructions → Use a real verb.
+- Stacked prepositional phrases (3+ prepositions) → Split into two sentences.
+- Decorative personification of abstractions → Replace with concrete action.
+- Clause-chain sentences with 3+ commas building to a dramatic landing → Split.
+- Poetic thesis closings ("And in the silence that followed…") → State the
+  CONCRETE CONSEQUENCE instead.
+Every one of these makes the narrator sound artificial. Replace with plain English.
+
+MIDPOINT AND LATE-PRESSURE CHECK:
+- At ~50% of total word count, verify there is a clear shift in the story's direction.
+  If not, add a forward-teasing line at the midpoint to signal the change.
+- In the final 25%, verify that pace accelerates. Shorter paragraphs, more decisions.
+  If the ending drags, tighten. No new background exposition in the final quarter.
+- The closing must state a CONCRETE CONSEQUENCE, not a philosophical reflection.
+  If the closing sounds like a TED Talk, rewrite it to state WHAT HAPPENED.
+
+INFORMATION DENSITY CHECK:
+- Every paragraph should be at least 70% information and at most 30% atmosphere.
+- Flag and fix any 100-word stretch without a name, date, number, place, action,
+  or consequence — these are dead air.
+
 SURGERY-ONLY MODE: You may ONLY rewrite, reorder, or tighten existing content.
 You are FORBIDDEN from:
 - Introducing ANY new named people not already in the script
 - Introducing ANY new historical events not already in the script
 - Adding new facts, anecdotes, or claims that weren't in the original
 - Exceeding the word count bounds
+- Changing the section order or major narrative structure
+- Removing or combining sections/paragraphs to the point where the
+  paragraph count drops below 80% of the original
 
 You may ONLY:
 - Rewrite weak sentences using the same facts/people
+- Rewrite poetic/literary sentences in plain conversational English
 - Reorder sentences within a section for better flow
 - Tighten prose (remove filler, strengthen verbs)
+- Split overlong sentences (>25 words) into two shorter ones
 - Add forward-teasing lines using existing information
 - Strengthen transitions between sections
+- Compress exposition blocks by embedding context into action
+- Strengthen paragraph endings (sharpen consequence, close a loop,
+  land on a detail, push into the next beat)
+- Rewrite closings that are philosophical into closings that state facts
+
+BOUNDED REDUCTION:
+- Your output must stay within ±8% of the input word count.
+- If the input is 3000 words, your output must be 2760–3240 words.
+- NEVER cut more than 10% of total word count. This is surgery, not amputation.
+- Preserve the same number of paragraphs (±20%).
 
 Retention killers to watch for (in order of severity):
-1. STASIS / ATMOSPHERE LOOPS: Multiple consecutive paragraphs in the same location with
+1. LITERARY BLOAT / POETRY MODE: Dense, metaphor-heavy prose that sounds beautiful
+   but is hard to follow on first listen. "The [noun] of [abstract noun]" patterns.
+   Sentences that require decoding. More than one metaphor per section.
+   THIS IS THE #1 PROBLEM. Fix every instance.
+   FIX: Rewrite in plain, conversational English. State what happened.
+2. STASIS / ATMOSPHERE LOOPS: Multiple consecutive paragraphs in the same location with
    the same characters doing the same activity, differing only in which sensory details
-   are described. This is the #1 retention killer. The SITUATION must change — new
+   are described. This is the #2 retention killer. The SITUATION must change — new
    complication, new character, new location, or new consequence — at least every
    90 seconds of narration (~225 words). If three paragraphs in a row describe the
    same person in the same room editing the same document, that is stasis.
    FIX: Restructure so each section introduces something NEW.
-2. POETRY MODE: Dense, metaphor-heavy prose that sounds beautiful but is hard to
-   follow on first listen. Sentences that require decoding ("Each imagined breath
-   owes the war rent") instead of clean storytelling ("Every fake name they invented
-   had to earn its place"). More than one metaphor per section is a red flag.
-   FIX: Rewrite in plain, conversational English. One metaphor per section max.
 3. DECORATIVE SENSORY DETAIL: Sensory details that don't advance the story or reveal
-   character. "The chipped cups came in with the ghost of someone else's lipstick
-   at the rim" — beautiful, but it tells us nothing. More than 2 sensory details per
-   scene is overload; the listener goes numb.
+   character. More than 2 sensory details per scene is overload.
    FIX: Keep only the ONE sensory detail per scene that matters most. Cut the rest.
 4. ESSAY SECTIONS: Any block of 60+ words with no named human, no sensory detail,
    and no decision/action. These are "Why This Matters" or "Big Take" essay traps.
    FIX: Fold the insight into a scene transition or cut entirely.
-5. RHETORICAL QUESTIONS: Philosophical questions ("Can language keep lives outside
-   the blast radius?") instead of forward-teasing lines ("The message was sent. Three
-   days later, a German officer in Madrid picked up his phone.").
+5. RHETORICAL QUESTIONS: Philosophical questions instead of forward-teasing lines.
    FIX: Rewrite to tease a concrete upcoming event or consequence.
-6. BULLET-POINT SIDEBARS: "Myth vs Reality" lists or fact-check blocks that break
+6. POETIC CLOSINGS: Closings that sound like philosophy essays instead of stating
+   concrete consequences. FIX: State what happened. Facts, not feelings.
+7. BULLET-POINT SIDEBARS: "Myth vs Reality" lists or fact-check blocks that break
    narrative flow. FIX: Embed each correction as a dramatic reveal.
-7. EXPOSITION DUMPS: Context longer than 45 seconds without a question or tension.
-8. STAKES PLATEAU: Stakes that level off or decrease in the middle of the story.
-9. NEGLECTED QUESTIONS: Narrative questions left unanswered for too long.
-10. GAPS WITHOUT FORWARD MOMENTUM: Stretches exceeding ~225 words where the listener
+8. EXPOSITION DUMPS: Context longer than 45 seconds without a question or tension.
+9. STAKES PLATEAU: Stakes that level off or decrease in the middle of the story.
+10. NEGLECTED QUESTIONS: Narrative questions left unanswered for too long.
+11. GAPS WITHOUT FORWARD MOMENTUM: Stretches exceeding ~225 words where the listener
     is not left wanting to know what happens next.
-11. TEXTBOOK VOICE: Passive, distant narration that reads like a Wikipedia summary.
-   Also flag any "According to Wikipedia" or "According to [source name]" attribution — you are the authority.
-12. HUMAN DROUGHT: Extended stretches with no named humans.
-13. ABSTRACT CLOSING: A closing that reads like a philosophy essay instead of landing
-    as a concrete, visceral image.
-14. NO NEW INFORMATION: Any stretch of 2+ minutes where the listener doesn't learn
-    anything new (no new facts, characters, complications, or consequences). The
-    audience came to LEARN something — if nothing new happens, they leave.
-15. HEDGE SPAM: Repetitive hedging phrases like "Evidence suggests…", "Records show…",
-    "The evidence points to…", or "Historians believe…" appearing more than 2–3 times
-    in the entire script. State facts confidently. Hedge ONLY for genuinely disputed
-    claims, and NEVER repeat the same hedge phrase.
-    FIX: Remove the hedge and state the fact directly, unless the claim is truly contested.
-
-When you find essay-mode sections, do NOT just tighten the prose. Restructure: move
-the insight into a scene, attach it to a human action, or cut it. The story must
-never stop moving."""
+12. TEXTBOOK VOICE: Passive, distant narration that reads like a Wikipedia summary.
+    Also flag any "According to Wikipedia" or "According to [source name]" attribution.
+13. HUMAN DROUGHT: Extended stretches with no named humans.
+14. ABSTRACT CLOSING: A closing that reads like a philosophy essay instead of landing
+    as a concrete consequence.
+15. NO NEW INFORMATION: Any stretch of 2+ minutes where the listener doesn't learn
+    anything new. The audience came to LEARN something — if nothing new happens, they leave.
+16. HEDGE SPAM: Repetitive hedging phrases appearing more than 2–3 times.
+    FIX: Remove the hedge and state the fact directly, unless truly contested.
+17. SENTENCE OVERWEIGHT: Any sentence exceeding 25 words.
+    FIX: Split into two sentences. Vary rhythm: long–short–long.
+18. NEAR-IDENTICAL REPETITION: The same key fact restated in near-identical phrasing.
+    FIX: Keep the strongest occurrence. Rewrite others to add new information or cut.
+19. SLOW SETUP: If the core conflict is not clear within the first ~230 words.
+    FIX: Move the conflict signal earlier. Context comes AFTER the hook.
+20. SENSORY OVERWEIGHT: Sensory details that span more than one clause.
+    FIX: Trim to one clause per detail, one detail per scene.
+21. ABSTRACT DRIFT: More than one consecutive sentence of analysis without a visual anchor.
+    FIX: Anchor the abstract point in a visible detail, then move on.
+22. INFORMATION STARVATION: Any paragraph that is more than 50% atmosphere with less
+    than 50% information (facts, names, dates, actions, consequences).
+    FIX: Add a fact, a name, or a consequence. The listener wants to learn something.
+""" + NARRATION_STYLE_LAYER + """
+When you find essay-mode or poetry-mode sections, do NOT just tighten the prose.
+REWRITE in plain English: state what happened, to whom, and what changed. The story
+must never stop moving, and the narrator must never sound artificial."""
 
 RETENTION_PASS_USER = """Analyze and improve this script for listener retention.
 
@@ -707,16 +1110,17 @@ After the script, add a brief "RETENTION NOTES:" section listing what you found 
 Output ONLY the revised script followed by RETENTION NOTES."""
 
 # ---------------------------------------------------------------------------
-# EMOTIONAL INTENSITY
+# SCRIPT QUALITY SCORES (merged emotional intensity + sensory density)
 # ---------------------------------------------------------------------------
 
-EMOTIONAL_INTENSITY_SYSTEM = """You are a narrative intensity analyst. You measure the emotional density of scripts using specific, quantifiable markers."""
+SCRIPT_QUALITY_SCORES_SYSTEM = """You are a narrative quality analyst. You measure the emotional intensity, sensory density, and narratability of scripts using specific, quantifiable markers. You return all scores in a single assessment. You penalize literary overreach and reward conversational clarity."""
 
-EMOTIONAL_INTENSITY_USER = """Score the emotional intensity of this script on a 0–100 scale.
+SCRIPT_QUALITY_SCORES_USER = """Score this script on THREE dimensions, each on a 0–100 scale.
 
 Script:
 {script}
 
+DIMENSION 1 — EMOTIONAL INTENSITY:
 Measure:
 1. Decision verbs (active choices by named humans): count and assess
 2. Stakes escalation (do stakes increase through the script?): assess pattern
@@ -729,28 +1133,7 @@ Scoring:
 - 70–79: Adequate but could be stronger
 - Below 70: Needs rewrite of escalation beats
 
-Return a JSON object:
-- "score": 0–100
-- "decision_verb_count": int
-- "stakes_pattern": "escalating" | "flat" | "declining"
-- "conflict_count": int
-- "uncertainty_marker_count": int
-- "weak_sections": array of descriptions of weak stretches
-- "recommendations": array of specific improvement suggestions
-
-Return ONLY the JSON object."""
-
-# ---------------------------------------------------------------------------
-# SENSORY DENSITY
-# ---------------------------------------------------------------------------
-
-SENSORY_DENSITY_SYSTEM = """You are a sensory writing analyst for scripts. You evaluate whether the script creates a visceral, present-tense experience or reads like an abstract summary."""
-
-SENSORY_DENSITY_USER = """Score the sensory density of this script on a 0–100 scale.
-
-Script:
-{script}
-
+DIMENSION 2 — SENSORY DENSITY:
 Measure:
 1. Environmental cues (weather, light, sound, smell, spatial layout)
 2. Physical details (what people are wearing, holding, doing with their hands)
@@ -762,13 +1145,33 @@ Scoring:
 - 70–79: Adequate but too many "telling" vs "showing" passages
 - Below 70: Too abstract — needs revision of the opening and setup
 
-Return a JSON object:
-- "score": 0–100
-- "environmental_cue_count": int
-- "physical_detail_count": int
-- "embodied_verb_count": int
-- "abstract_sections": array of descriptions of overly abstract stretches
-- "recommendations": array of specific sensory details to add
+DIMENSION 3 — NARRATABILITY (how well this reads aloud):
+Measure:
+1. Anti-poetic violations: Count instances of "The [noun] of [abstract noun]",
+   "It was not X — it was Y" pivots, noun-as-verb poetic constructions, stacked
+   prepositional metaphors, decorative personification, and clause-chain dramatic
+   landings. Each is a violation.
+2. Sentence clarity: What percentage of sentences are immediately clear on first
+   listen vs requiring re-reading or decoding?
+3. Information density: Sample 5 paragraphs — what percentage of each is information
+   (facts, events, names, dates, consequences) vs atmosphere (sensory, mood)?
+4. Conversational register: Does this sound like someone talking, or like someone
+   writing? Count sentences that sound literary vs conversational.
+5. Closing quality: Does the closing state a concrete consequence or does it drift
+   into philosophy? "He signed the paper. The war was over." = good. "And in the
+   silence, the world learned…" = bad.
+
+Scoring:
+- 90–100: Sounds completely natural read aloud. Zero poetic violations. 70%+ info density. Factual closing.
+- 80–89: Mostly natural with 1–2 literary moments. Good info density.
+- 70–79: Noticeable literary register in places. Some atmosphere-heavy paragraphs.
+- 60–69: Frequent poetic patterns. Multiple anti-poetic violations. Reads more like an essay than a narration.
+- Below 60: Heavily literary. Multiple "The [noun] of [abstract noun]" patterns. Poetic closing. Information-light.
+
+Return a JSON object with:
+- "emotional_intensity": object with keys: "score" (0–100), "decision_verb_count" (int), "stakes_pattern" ("escalating"|"flat"|"declining"), "conflict_count" (int), "uncertainty_marker_count" (int), "weak_sections" (array), "recommendations" (array)
+- "sensory_density": object with keys: "score" (0–100), "environmental_cue_count" (int), "physical_detail_count" (int), "embodied_verb_count" (int), "abstract_sections" (array), "recommendations" (array)
+- "narratability": object with keys: "score" (0–100), "anti_poetic_violation_count" (int), "sentence_clarity_pct" (int — percent of sentences clear on first listen), "info_density_pct" (int — average info density across sampled paragraphs), "literary_sentence_count" (int), "closing_quality" ("concrete"|"abstract"|"philosophical"), "violations" (array of specific violation strings), "recommendations" (array)
 
 Return ONLY the JSON object."""
 
@@ -809,13 +1212,30 @@ Check:
 12. CRITICAL: Every named person in the script must be a REAL, historically documented individual. Flag any character who appears to be invented, composite, or fictional. Cross-reference names against the claims log. If a name does not appear in verified claims or is not a widely known historical figure, flag it as potentially fabricated.
 13. ESSAY SECTION CHECK: Flag any block of 60+ words that contains zero named humans, zero sensory details, and zero decisions/actions. These are retention valleys.
 14. BULLET-POINT SIDEBAR CHECK: Flag any "Myth:" / "Reality:" bullet-point lists or fact-check blocks that sit outside the narrative flow. Corrections should be embedded as dramatic reveals, not listed as sidebars.
-15. CLOSING CHECK: If the closing is longer than 3 sentences or more abstract than concrete, flag it. The ending should be a visceral image, not a thesis paragraph.
+15. CLOSING CHECK: If the closing is longer than 3 sentences or more abstract than concrete, flag it. The ending should state a CONCRETE CONSEQUENCE — who lived, who died, what was built or destroyed — not a philosophical reflection.
 16. STASIS CHECK: Flag any stretch of 3+ consecutive paragraphs (or ~225+ words) where the same character is in the same location doing the same activity with no new complication, character, or information introduced. Atmosphere changes don't count — the SITUATION must change.
-17. POETRY MODE CHECK: Flag sentences that require decoding a metaphor to understand the story. Flag stretches with more than 2 metaphors. The script must be immediately comprehensible on first listen.
+17. POETRY MODE CHECK: Flag sentences that require decoding a metaphor to understand the story. Flag stretches with more than 2 metaphors. Flag any instance of: "The [noun] of [abstract noun]", "It was not X — it was Y" rhetorical pivots, noun-as-verb poetic constructions, stacked prepositional metaphors, clause-chain sentences (3+ commas building to a dramatic landing), or poetic thesis closings. The script must be immediately comprehensible on first listen and sound like spoken narration, not literature.
 18. SENSORY OVERLOAD CHECK: Flag scenes with more than 2 sensory details. Each scene should have ONE functional sensory detail, max TWO. Decorative atmosphere is a retention killer.
 19. FORWARD-MOMENTUM CHECK: Flag stretches where the listener is not left wanting to know what happens next. Good forward-teasing lines create anticipation for what comes NEXT, not rhetorical/philosophical questions.
 20. HEDGE SPAM CHECK: Count occurrences of hedging phrases like "Evidence suggests", "Records show", "The evidence points to", "Historians believe", "Records indicate", and "The evidence suggests". If the TOTAL count across all such phrases exceeds 3 in the entire script, flag it. State facts confidently — hedging is reserved for genuinely disputed claims only, and each hedge phrase should appear at most ONCE.
 21. PURE TEXT CHECK: The script must be PURE SPOKEN TEXT — no section headers (--- [NAME] ---), no labels (Re-hook:, Cross-cut:), no stage directions, no markers. Every single word should be something that gets read aloud. Flag ANY non-spoken artifacts.
+22. SENTENCE LENGTH CHECK: Scan every sentence. If ANY sentence exceeds 25 words, flag it with the sentence text and word count. Average sentence length across the script should be 12–18 words — flag if the average exceeds 20.
+23. REPETITION CHECK: Flag any key fact or phrase that appears in near-identical phrasing more than twice. Each recurrence of a fact must add new information or recontextualise the previous mention.
+24. SETUP PACING CHECK: Check the first ~230 words (~90 seconds). If the core conflict (what is at stake and for whom) is not clear by that point, flag the opening as too slow.
+25. SENSORY DENSITY CHECK: Flag any scene with 3+ sensory details, or any single sensory detail that spans more than one clause (adjective stacking). Each scene should have ONE functional sensory detail, max TWO.
+26. VISUAL ANCHOR CHECK: Flag any stretch of 2+ consecutive sentences that are purely abstract analysis or interior-state narration with no concrete visual element (face, document, room, object, map, building) that a video editor could illustrate.
+27. MIDPOINT SHIFT CHECK: At approximately 45–55% of total word count, verify there is a clear change in the story's direction (a failed plan, new actor, recontextualisation, or stakes escalation). If the story's direction at the midpoint is the same as in the setup, flag it as "weak midpoint — no directional shift."
+28. LATE PRESSURE CHECK: In the final 25% of the script, verify that the pace accelerates — shorter paragraphs, more decisions per minute, at least one deadline or time-pressure moment. Flag any new background exposition in the final quarter. Flag closings that are philosophical instead of concrete.
+29. ANTI-POETIC PATTERN CHECK: Explicitly scan for and flag ALL instances of:
+    - "The [noun] of [abstract noun]" (e.g. "The architecture of betrayal")
+    - "It was not X — it was Y" rhetorical pivots
+    - Noun-as-verb poetic formulations (e.g. "History telescoped")
+    - Stacked prepositional metaphors (3+ prepositional phrases in one sentence)
+    - Decorative personification of abstractions (e.g. "Silence carried weight")
+    - Clause-chain sentences building to dramatic landings
+    - Poetic thesis closings ("And in the silence that followed…", "Perhaps the lesson is…")
+    Each of these is a concrete, countable violation. Report the count.
+30. INFORMATION DENSITY CHECK: Sample 3–5 representative paragraphs. For each, estimate what percentage is INFORMATION (facts, events, names, dates, consequences, decisions) vs ATMOSPHERE (sensory, mood, setting). Flag any paragraph where atmosphere exceeds 50%. The script should average 70%+ information density.
 
 Return a JSON object:
 - "overall_pass": boolean
@@ -833,51 +1253,66 @@ Return ONLY the JSON object."""
 TONE_INSTRUCTIONS = {
     "cinematic-serious": (
         "Use clean, measured prose. Sentences vary: some long and flowing, "
-        "some short and impactful. Weight in every line. Gravitas without pretension. "
-        "Average sentence length: 14–20 words. Allow occasional single-word sentences "
-        "for impact. This is SPOKEN narration — every sentence must be immediately "
-        "clear on first listen. Max ONE metaphor per section."
+        "some short and impactful. Gravitas without pretension. "
+        "Average sentence length: 14–20 words. Hard ceiling: 25 words per sentence. "
+        "Allow occasional single-word sentences for impact. "
+        "This is SPOKEN narration — every sentence must be immediately "
+        "clear on first listen. Max ONE metaphor per section. "
+        "ONE sensory detail per scene — make it count, then move on. "
+        "This is a knowledgeable friend explaining what happened, not a novelist. "
+        "Plain English always beats clever phrasing. Prefer verbs over metaphors."
     ),
     "investigative": (
         "Question-driven narration. Pose questions, then answer them with evidence. "
         "'What did he know?' 'The documents show…' Direct, evidence-forward. "
-        "Average sentence length: 10–16 words. Clipped when presenting facts. "
+        "Average sentence length: 10–16 words. Hard ceiling: 25 words. "
+        "Clipped when presenting facts. "
         "This is a detective telling you what they found — conversational, precise, "
         "never poetic. Think podcast host, not poet. Plain language is power. "
-        "ONE sensory detail per scene to ground the listener, then move on."
+        "ONE sensory detail per scene to ground the listener, then move on. "
+        "Zero literary flourishes. State the facts, state the consequences."
     ),
     "fast-paced": (
         "Short sentences. Rapid cuts between perspectives. Urgency in every line. "
         "No wasted words. Sentence fragments allowed. 'He ran. The door. Locked.' "
-        "Average sentence length: 6–12 words. Zero decorative detail."
+        "Average sentence length: 6–12 words. Zero decorative detail. "
+        "Information density is everything — every sentence teaches something new."
     ),
     "somber": (
         "Quiet gravity. Restrained emotion — the weight is in what's NOT said. "
         "Longer sentences with deliberate pauses marked by em-dashes and ellipses. "
-        "Average sentence length: 16–22 words. Even in somber mode, the story must "
-        "MOVE — gravity is earned by events, not by stacking metaphors."
+        "Average sentence length: 16–22 words. Hard ceiling: 25 words. "
+        "Even in somber mode, the story must "
+        "MOVE — gravity is earned by events, not by stacking metaphors. "
+        "Somber does NOT mean poetic. State facts quietly. Let the events carry weight."
     ),
     "restrained": (
         "Understated, deliberate prose. Facts speak for themselves. "
         "Minimal adjectives. Let the events carry the emotion. "
-        "Average sentence length: 12–18 words. Clean and direct."
+        "Average sentence length: 12–18 words. Clean and direct. "
+        "Zero literary flourishes. Plain English is the strongest register."
     ),
     "urgent": (
         "Compressed time. Pressure in every line. 'There were forty minutes left.' "
         "Countdown language. Short paragraphs. Breathless but controlled. "
-        "Average sentence length: 8–14 words. Zero decoration."
+        "Average sentence length: 8–14 words. Zero decoration. "
+        "Maximum information density — the listener is on the edge of their seat."
     ),
     "claustrophobic": (
         "Tight spaces, limited options. ONE sensory detail per scene — the one that "
         "makes the space feel small. Interior monologue implied. "
         "Average sentence length: 10–16 words. Fragmented when tension peaks. "
-        "Claustrophobia comes from SITUATION, not from stacking adjectives."
+        "Claustrophobia comes from SITUATION, not from stacking adjectives. "
+        "State the constraints. The walls close in through facts, not poetry."
     ),
     "reflective": (
         "Thoughtful but grounded. Meaning-seeking narration that connects past to present. "
         "Slightly longer, contemplative sentences. Questions that linger. No rush. "
-        "Average sentence length: 16–22 words. Even reflective tone must deliver "
-        "new information regularly — contemplation without forward motion is a lecture."
+        "Average sentence length: 16–22 words. Hard ceiling: 25 words. "
+        "Even reflective tone must deliver "
+        "new information regularly — contemplation without forward motion is a lecture. "
+        "Reflective does NOT mean poetic. Ground every insight in a specific fact, "
+        "name, or consequence. The reflection earns its place by what it TEACHES."
     ),
 }
 

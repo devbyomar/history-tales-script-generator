@@ -34,7 +34,8 @@ def hard_guardrails_node(state: dict[str, Any]) -> dict[str, Any]:
     rehook_interval = state.get("rehook_interval", (60, 90))
 
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
-    rehook_words = int(avg_rehook * (155 / 60))
+    wpm = state.get("words_per_minute", 155)
+    rehook_words = int(avg_rehook * (wpm / 60))
 
     # Convert to dicts for validators
     outline_dicts = [

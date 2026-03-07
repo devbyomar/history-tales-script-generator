@@ -9,6 +9,7 @@ from typing import Any
 
 from history_tales_agent.state import AgentState, Claim, QCReport, SourceEntry
 from history_tales_agent.output.elevenlabs_formatter import write_elevenlabs_script
+from history_tales_agent.output.speechify_formatter import write_speechify_script
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -134,5 +135,13 @@ def format_output(state: dict[str, Any], output_dir: str = "output") -> Path:
         write_elevenlabs_script(state, output_dir)
     except Exception as e:
         logger.warning("elevenlabs_format_failed", error=str(e))
+
+    # --- script_speechify.txt (when speechify_export mode is active) ---
+    output_mode = state.get("output_mode", "standard")
+    if output_mode == "speechify_export":
+        try:
+            write_speechify_script(state, output_dir)
+        except Exception as e:
+            logger.warning("speechify_format_failed", error=str(e))
 
     return out

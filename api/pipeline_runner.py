@@ -26,10 +26,8 @@ class _PipelineCancelled(Exception):
 # Pipeline node order (matches graph.py edge definitions)
 PIPELINE_NODES = [
     "topic_discovery",
-    "format_rotation_guard",
     "topic_scoring",
     "research_fetch",
-    "source_credibility",
     "claims_extraction",
     "cross_check",
     "timeline_builder",
@@ -39,18 +37,15 @@ PIPELINE_NODES = [
     "script_generation",
     "fact_tighten",
     "retention_pass",
-    "emotional_intensity",
-    "sensory_density",
+    "script_quality_scores",
     "quality_check",
     "finalize",
 ]
 
 NODE_LABELS = {
     "topic_discovery": "Discovering Topics",
-    "format_rotation_guard": "Checking Format Rotation",
     "topic_scoring": "Scoring Topics",
-    "research_fetch": "Fetching Research",
-    "source_credibility": "Evaluating Source Credibility",
+    "research_fetch": "Fetching Research & Validating Sources",
     "claims_extraction": "Extracting Claims",
     "cross_check": "Cross-Checking Facts",
     "timeline_builder": "Building Timeline",
@@ -60,8 +55,7 @@ NODE_LABELS = {
     "script_generation": "Writing Script",
     "fact_tighten": "Fact-Checking & Trace Tags",
     "retention_pass": "Applying Retention Hooks",
-    "emotional_intensity": "Scoring Emotional Intensity",
-    "sensory_density": "Checking Sensory Density",
+    "script_quality_scores": "Scoring Emotional Intensity & Sensory Density",
     "quality_check": "Running Quality Check",
     "finalize": "Finalizing Output",
 }

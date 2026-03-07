@@ -13,6 +13,7 @@ from history_tales_agent.narrative.lenses import resolve_lenses, build_lens_prom
 from history_tales_agent.narrative.geo import build_geo_prompt_block
 from history_tales_agent.state import AgentState, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
+from history_tales_agent.utils.coerce import coerce_to_str_list
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -76,10 +77,10 @@ def topic_discovery_node(state: dict[str, Any]) -> dict[str, Any]:
                 geo=raw.get("geo", ""),
                 core_pov=raw.get("core_pov", ""),
                 timeline_window=raw.get("timeline_window", ""),
-                twist_points=raw.get("twist_points", [])[:5],
+                twist_points=coerce_to_str_list(raw.get("twist_points", []))[:5],
                 what_people_get_wrong=raw.get("what_people_get_wrong", ""),
                 format_tag=raw.get("format_tag", "Countdown"),
-                likely_sources=raw.get("likely_sources", []),
+                likely_sources=coerce_to_str_list(raw.get("likely_sources", [])),
             )
             candidates.append(candidate)
         except Exception as e:

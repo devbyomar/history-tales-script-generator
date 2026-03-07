@@ -52,10 +52,19 @@ ALL_FORMAT_TAGS: list[str] = [
 SensitivityLevel = Literal["general audiences", "teen", "mature"]
 
 # ---------------------------------------------------------------------------
-# Word-rate constant
+# Output modes
+# ---------------------------------------------------------------------------
+OutputMode = Literal["standard", "speechify_export"]
+
+# ---------------------------------------------------------------------------
+# Word-rate constants
 # ---------------------------------------------------------------------------
 WORDS_PER_MINUTE = 155
 WORD_TOLERANCE = 0.10  # ±10%
+
+# Speechify reads slower; tighter tolerance for paste-ready export
+SPEECHIFY_WORDS_PER_MINUTE = 115
+SPEECHIFY_WORD_TOLERANCE = 0.03  # ±3%
 
 # ---------------------------------------------------------------------------
 # Scoring weights  (sum = 100 + 6 = 106 → normalised inside scorer)
@@ -136,7 +145,7 @@ class AppConfig:
 
     # Rate limiting
     max_requests_per_minute: int = field(
-        default_factory=lambda: int(os.getenv("MAX_REQUESTS_PER_MINUTE", "20"))
+        default_factory=lambda: int(os.getenv("MAX_REQUESTS_PER_MINUTE", "60"))
     )
     max_tokens_per_minute: int = field(
         default_factory=lambda: int(os.getenv("MAX_TOKENS_PER_MINUTE", "150000"))
