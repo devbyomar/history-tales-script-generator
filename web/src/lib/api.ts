@@ -24,6 +24,7 @@ export interface GenerateParams {
   geo_anchor?: string;
   mobility_mode?: string;
   output_mode?: string;
+  skip_topic_exploration?: boolean;
 }
 
 export interface RunSummary {
