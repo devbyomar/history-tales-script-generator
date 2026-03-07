@@ -27,6 +27,7 @@ class _PipelineCancelled(Exception):
 PIPELINE_NODES = [
     "topic_discovery",
     "topic_scoring",
+    "topic_seed_bypass",
     "research_fetch",
     "claims_extraction",
     "cross_check",
@@ -45,6 +46,7 @@ PIPELINE_NODES = [
 NODE_LABELS = {
     "topic_discovery": "Discovering Topics",
     "topic_scoring": "Scoring Topics",
+    "topic_seed_bypass": "Using Topic Seed Directly",
     "research_fetch": "Fetching Research & Validating Sources",
     "claims_extraction": "Extracting Claims",
     "cross_check": "Cross-Checking Facts",
@@ -114,6 +116,7 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             "geo_anchor": params.get("geo_anchor"),
             "mobility_mode": params.get("mobility_mode"),
             "output_mode": output_mode,
+            "skip_topic_exploration": params.get("skip_topic_exploration", False),
             "target_words": target_words,
             "min_words": min_words,
             "max_words": max_words,

@@ -8,8 +8,15 @@ Optimised from 18 nodes:
 
 from __future__ import annotations
 
+from typing import Any
+
 from langgraph.graph import END, StateGraph
 
+from history_tales_agent.config import (
+    ALL_FORMAT_TAGS,
+    WORDS_PER_MINUTE,
+    WORD_TOLERANCE,
+)
 from history_tales_agent.nodes.claims_extraction import claims_extraction_node
 from history_tales_agent.nodes.cross_check import cross_check_node
 from history_tales_agent.nodes.emotional_extraction import emotional_extraction_node
@@ -25,7 +32,7 @@ from history_tales_agent.nodes.script_quality_scores import script_quality_score
 from history_tales_agent.nodes.timeline_builder import timeline_builder_node
 from history_tales_agent.nodes.topic_discovery import topic_discovery_node
 from history_tales_agent.nodes.topic_scoring import topic_scoring_node
-from history_tales_agent.state import GraphState, QCReport
+from history_tales_agent.state import GraphState, QCReport, TopicCandidate
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -57,23 +64,91 @@ def _qc_route(state: dict) -> str:
     return "finalize"
 
 
-def build_graph() -> StateGraph:
-    """Build and compile the 15-node LangGraph pipeline.
+# ---------------------------------------------------------------------------
+# Topic seed bypass — skips discovery + scoring when the user already
+# knows what topic they want.
+# ---------------------------------------------------------------------------
 
-    Flow:
+def topic_seed_bypass_node(state: dict[str, Any]) -> dict[str, Any]:
+    """Create a TopicCandidate directly from topic_seed, skipping LLM discovery.
+
+    Produces the same output keys as topic_scoring_node so downstream nodes
+    (research_fetch, etc.) see no difference.
+    """
+    logger.info("node_start", node="TopicSeedBypass")
+
+    topic_seed = state.get("topic_seed", "")
+    video_length = state.get("video_length_minutes", 12)
+    era_focus = state.get("era_focus") or ""
+    geo_focus = state.get("geo_focus") or ""
+    tone = state.get("tone", "cinematic-serious")
+    requested_format = state.get("requested_format_tag")
+
+    # Pick a format: honour requested_format, else default to Countdown
+    format_tag = requested_format if requested_format else "Countdown"
+
+    chosen = TopicCandidate(
+        title=topic_seed,
+        one_sentence_hook=topic_seed,
+        era=era_focus,
+        geo=geo_focus,
+        core_pov="",
+        timeline_window="",
+        twist_points=["TBD", "TBD", "TBD"],  # min 3 required; research will fill real ones
+        what_people_get_wrong="",
+        format_tag=format_tag,
+        likely_sources=[],
+        score=100.0,  # user-selected — full confidence
+    )
+
+    target_words = video_length * WORDS_PER_MINUTE
+    min_words = int(target_words * (1 - WORD_TOLERANCE))
+    max_words = int(target_words * (1 + WORD_TOLERANCE))
+    rehook_interval = (60, 90) if video_length <= 12 else (90, 120)
+
+    logger.info(
+        "topic_seed_bypass_complete",
+        title=chosen.title,
+        format=chosen.format_tag,
+        target_words=target_words,
+    )
+
+    return {
+        "chosen_topic": chosen,
+        "format_tag": chosen.format_tag,
+        "target_words": target_words,
+        "min_words": min_words,
+        "max_words": max_words,
+        "rehook_interval": rehook_interval,
+        "current_node": "TopicSeedBypass",
+    }
+
+
+def _entry_route(state: dict) -> str:
+    """Route at entry: bypass discovery+scoring if skip_topic_exploration is True."""
+    if state.get("skip_topic_exploration") and state.get("topic_seed"):
+        return "topic_seed_bypass"
+    return "topic_discovery"
+
+
+def build_graph() -> StateGraph:
+    """Build and compile the LangGraph pipeline.
+
+    Flow (standard):
         TopicDiscovery → TopicScoring (incl. format rotation)
-        → ResearchFetch (incl. source credibility) → ClaimsExtraction
-        → CrossCheck → TimelineBuilder → EmotionalExtraction → Outline
-        → HardGuardrails → ScriptGeneration → FactTighten → RetentionPass
-        → ScriptQualityScores → QualityCheck
-        ↳ (pass or max retries) → Finalize
-        ↳ (fail + word count off) → ScriptGeneration (retry loop)
+        → ResearchFetch → … → Finalize
+
+    Flow (skip_topic_exploration=True):
+        TopicSeedBypass → ResearchFetch → … → Finalize
+
+    QC retry loop routes back to ScriptGeneration up to MAX_QC_RETRIES times.
     """
     workflow = StateGraph(GraphState)
 
-    # --- Add all 15 nodes ---
+    # --- Add nodes ---
     workflow.add_node("topic_discovery", topic_discovery_node)
     workflow.add_node("topic_scoring", topic_scoring_node)
+    workflow.add_node("topic_seed_bypass", topic_seed_bypass_node)
     workflow.add_node("research_fetch", research_fetch_node)
     workflow.add_node("claims_extraction", claims_extraction_node)
     workflow.add_node("cross_check", cross_check_node)
@@ -88,11 +163,23 @@ def build_graph() -> StateGraph:
     workflow.add_node("quality_check", quality_check_node)
     workflow.add_node("finalize", finalize_node)
 
-    # --- Define edges ---
-    workflow.set_entry_point("topic_discovery")
+    # --- Entry: conditional routing based on skip_topic_exploration ---
+    workflow.set_conditional_entry_point(
+        _entry_route,
+        {
+            "topic_discovery": "topic_discovery",
+            "topic_seed_bypass": "topic_seed_bypass",
+        },
+    )
 
+    # Standard discovery path
     workflow.add_edge("topic_discovery", "topic_scoring")
     workflow.add_edge("topic_scoring", "research_fetch")
+
+    # Bypass path merges into the same downstream flow
+    workflow.add_edge("topic_seed_bypass", "research_fetch")
+
+    # Shared downstream edges
     workflow.add_edge("research_fetch", "claims_extraction")
     workflow.add_edge("claims_extraction", "cross_check")
     workflow.add_edge("cross_check", "timeline_builder")
@@ -117,7 +204,7 @@ def build_graph() -> StateGraph:
 
     workflow.add_edge("finalize", END)
 
-    logger.info("graph_built", nodes=15)
+    logger.info("graph_built", nodes=16)
     return workflow
 
 
