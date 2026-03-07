@@ -279,3 +279,24 @@ async def export_elevenlabs_flash(run_id: str):
             "Content-Disposition": f'attachment; filename="{title.replace(" ", "_")}_elevenlabs_flash.txt"'
         },
     )
+
+
+@app.get("/runs/{run_id}/export/speechify")
+async def export_speechify(run_id: str):
+    """Export the Speechify TTS-ready script as plain text."""
+    run = run_store.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    if not run.script_speechify:
+        raise HTTPException(status_code=400, detail="No Speechify script available yet")
+
+    from fastapi.responses import PlainTextResponse
+
+    title = run.title or "Untitled"
+    return PlainTextResponse(
+        content=run.script_speechify,
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="{title.replace(" ", "_")}_speechify.txt"'
+        },
+    )

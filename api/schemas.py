@@ -30,6 +30,7 @@ class GenerateRequest(BaseModel):
     geo_scope: Optional[str] = Field(None, description="Geographic scope (single_city, region, country, theater, global)")
     geo_anchor: Optional[str] = Field(None, description="Physical focal point for spatial cohesion")
     mobility_mode: Optional[str] = Field(None, description="Spatial narrative mode (fixed_site, route_based, multi_site, theater_wide)")
+    output_mode: str = Field("standard", description="Output mode — 'standard' (155 WPM) or 'speechify_export' (115 WPM, plain narration)")
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ class RunSummary(BaseModel):
     target_words: Optional[int] = None
     emotional_intensity: Optional[float] = None
     sensory_density: Optional[float] = None
+    narratability: Optional[float] = None
     source_count: Optional[int] = None
     claim_count: Optional[int] = None
     qc_pass: Optional[bool] = None
@@ -72,6 +74,7 @@ class RunDetail(RunSummary):
     final_script: Optional[str] = None
     script_elevenlabs_v3: Optional[str] = None
     script_elevenlabs_flash: Optional[str] = None
+    script_speechify: Optional[str] = None
     sources_log: list[dict[str, Any]] = Field(default_factory=list)
     claims: list[dict[str, Any]] = Field(default_factory=list)
     qc_report: Optional[dict[str, Any]] = None
@@ -85,7 +88,7 @@ class NodeProgress(BaseModel):
     node: str
     status: str  # "started" | "completed" | "failed"
     node_index: int  # 1-based position in pipeline
-    total_nodes: int = 18
+    total_nodes: int = 15
     message: str = ""
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     data: Optional[dict[str, Any]] = None  # Optional extra data from node
@@ -96,5 +99,5 @@ class HealthResponse(BaseModel):
 
     status: str = "ok"
     version: str = "1.0.0"
-    pipeline_nodes: int = 18
+    pipeline_nodes: int = 15
     models: dict[str, str] = Field(default_factory=dict)

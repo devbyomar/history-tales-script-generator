@@ -65,6 +65,11 @@ const MOBILITY_MODES = [
   { value: "theater_wide", label: "Theater Wide" },
 ];
 
+const OUTPUT_MODES = [
+  { value: "standard", label: "Standard (155 WPM)" },
+  { value: "speechify_export", label: "Speechify Export (115 WPM)" },
+];
+
 interface GenerateFormProps {
   onSubmit: (params: GenerateParams) => void;
   isLoading: boolean;
@@ -84,6 +89,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const [geoScope, setGeoScope] = useState("");
   const [geoAnchor, setGeoAnchor] = useState("");
   const [mobilityMode, setMobilityMode] = useState("");
+  const [outputMode, setOutputMode] = useState("standard");
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -102,6 +108,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
         geo_scope: geoScope || undefined,
         geo_anchor: geoAnchor || undefined,
         mobility_mode: mobilityMode || undefined,
+        output_mode: outputMode,
       });
     },
     [
@@ -118,6 +125,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       geoScope,
       geoAnchor,
       mobilityMode,
+      outputMode,
       onSubmit,
     ]
   );
@@ -140,7 +148,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             <Label htmlFor="videoLength">
               Video Length{" "}
               <span className="text-muted-foreground font-normal">
-                ({videoLength} min → ~{videoLength * 155} words)
+                ({videoLength} min → ~{videoLength * (outputMode === "speechify_export" ? 115 : 155)} words)
               </span>
             </Label>
             <div className="flex items-center gap-3">
@@ -231,21 +239,38 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
             </div>
           </div>
 
-          {/* Format */}
-          <div className="space-y-2">
-            <Label>Format</Label>
-            <Select value={format} onValueChange={setFormat}>
-              <SelectTrigger>
-                <SelectValue placeholder="Auto (rotation)" />
-              </SelectTrigger>
-              <SelectContent>
-                {FORMATS.map((f) => (
-                  <SelectItem key={f.value || "auto"} value={f.value || "none"}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Format & Output Mode */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Format</Label>
+              <Select value={format} onValueChange={setFormat}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Auto (rotation)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMATS.map((f) => (
+                    <SelectItem key={f.value || "auto"} value={f.value || "none"}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Output Mode</Label>
+              <Select value={outputMode} onValueChange={setOutputMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OUTPUT_MODES.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Nonlinear Open */}

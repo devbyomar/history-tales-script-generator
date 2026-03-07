@@ -20,12 +20,14 @@ import {
   Check,
   Mic,
   Zap,
+  Volume2,
 } from "lucide-react";
 import {
   getExportScriptUrl,
   getExportSourcesUrl,
   getExportElevenlabsV3Url,
   getExportElevenlabsFlashUrl,
+  getExportSpeechifyUrl,
 } from "@/lib/api";
 import type { RunDetail } from "@/lib/api";
 
@@ -105,6 +107,18 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
                 Flash
               </Button>
             )}
+            {run.script_speechify && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(getExportSpeechifyUrl(run.run_id))
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Speechify
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -122,6 +136,10 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
             <TabsTrigger value="elevenlabs-flash" className="gap-1.5">
               <Zap className="h-3.5 w-3.5" />
               ElevenLabs Flash
+            </TabsTrigger>
+            <TabsTrigger value="speechify" className="gap-1.5">
+              <Volume2 className="h-3.5 w-3.5" />
+              Speechify
             </TabsTrigger>
             <TabsTrigger value="sources" className="gap-1.5">
               <BookOpen className="h-3.5 w-3.5" />
@@ -191,6 +209,15 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
             />
           </TabsContent>
 
+          {/* Speechify Tab */}
+          <TabsContent value="speechify" className="mt-4">
+            <ElevenLabsPanel
+              content={run.script_speechify}
+              label="Speechify"
+              description="Plain narration at 115 WPM — no SSML, no audio tags. Optimised for Speechify TTS with clean punctuation-based pacing."
+            />
+          </TabsContent>
+
           {/* Sources Tab */}
           <TabsContent value="sources" className="mt-4">
             <div className="max-h-[600px] overflow-y-auto space-y-2">
@@ -238,7 +265,7 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
             <div className="rounded-lg border bg-background/50 p-4 space-y-4">
               {run.qc_report ? (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <StatCard
                       label="Word Count"
                       value={
@@ -258,6 +285,12 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
                       value={`${run.sensory_density?.toFixed(1) || "—"}/100`}
                       target="Min: 70"
                       ok={(run.sensory_density || 0) >= 70}
+                    />
+                    <StatCard
+                      label="Narratability"
+                      value={`${run.narratability?.toFixed(1) || "—"}/100`}
+                      target="Min: 70"
+                      ok={(run.narratability || 0) >= 70}
                     />
                     <StatCard
                       label="Sources"
@@ -325,6 +358,21 @@ export function ScriptViewer({ run }: ScriptViewerProps) {
                 value={run.topic_score?.toFixed(1) || "—"}
                 target="Min: 78"
                 ok={(run.topic_score || 0) >= 78}
+              />
+              <StatCard
+                label="Emotional"
+                value={run.emotional_intensity?.toFixed(1) || "—"}
+                target=""
+              />
+              <StatCard
+                label="Sensory"
+                value={run.sensory_density?.toFixed(1) || "—"}
+                target=""
+              />
+              <StatCard
+                label="Narratability"
+                value={run.narratability?.toFixed(1) || "—"}
+                target=""
               />
             </div>
           </TabsContent>

@@ -55,7 +55,7 @@ NODE_LABELS = {
     "script_generation": "Writing Script",
     "fact_tighten": "Fact-Checking & Trace Tags",
     "retention_pass": "Applying Retention Hooks",
-    "script_quality_scores": "Scoring Emotional Intensity & Sensory Density",
+    "script_quality_scores": "Scoring Emotional Intensity, Sensory Density & Narratability",
     "quality_check": "Running Quality Check",
     "finalize": "Finalizing Output",
 }
@@ -67,7 +67,13 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
     Uses LangGraph's stream() to intercept node completions and publish
     SSE events. Falls back to invoke() if streaming isn't available.
     """
-    from history_tales_agent.config import WORDS_PER_MINUTE, WORD_TOLERANCE, get_config
+    from history_tales_agent.config import (
+        WORDS_PER_MINUTE,
+        WORD_TOLERANCE,
+        SPEECHIFY_WORDS_PER_MINUTE,
+        SPEECHIFY_WORD_TOLERANCE,
+        get_config,
+    )
     from history_tales_agent.graph import compile_graph
     from history_tales_agent.utils.logging import setup_logging
 
@@ -75,11 +81,18 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
         config = get_config()
         setup_logging(config.log_level)
 
-        # Compute word targets
+        # Compute word targets — Speechify reads at 115 WPM vs 155 WPM standard
         video_length = params["video_length_minutes"]
-        target_words = video_length * WORDS_PER_MINUTE
-        min_words = int(target_words * (1 - WORD_TOLERANCE))
-        max_words = int(target_words * (1 + WORD_TOLERANCE))
+        output_mode = params.get("output_mode", "standard")
+        if output_mode == "speechify_export":
+            wpm = SPEECHIFY_WORDS_PER_MINUTE
+            tolerance = SPEECHIFY_WORD_TOLERANCE
+        else:
+            wpm = WORDS_PER_MINUTE
+            tolerance = WORD_TOLERANCE
+        target_words = video_length * wpm
+        min_words = int(target_words * (1 - tolerance))
+        max_words = int(target_words * (1 + tolerance))
 
         # Determine re-hook interval
         rehook_interval = (60, 90) if video_length <= 12 else (90, 120)
@@ -100,10 +113,12 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             "geo_scope": params.get("geo_scope"),
             "geo_anchor": params.get("geo_anchor"),
             "mobility_mode": params.get("mobility_mode"),
+            "output_mode": output_mode,
             "target_words": target_words,
             "min_words": min_words,
             "max_words": max_words,
             "rehook_interval": rehook_interval,
+            "words_per_minute": wpm,
             "topic_candidates": [],
             "chosen_topic": None,
             "research_corpus": [],
@@ -120,6 +135,7 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             "format_tag": "",
             "emotional_intensity_score": 0.0,
             "sensory_density_score": 0.0,
+            "narratability_score": 0.0,
             "validation_issues": [],
             "current_node": "",
             "errors": [],
@@ -238,8 +254,15 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             format_elevenlabs_v3,
             format_elevenlabs_flash,
         )
+        from history_tales_agent.output.speechify_formatter import format_speechify
+
         script_el_v3 = format_elevenlabs_v3(script) if script else ""
         script_el_flash = format_elevenlabs_flash(script) if script else ""
+
+        # Generate Speechify export if output mode is speechify_export
+        script_speechify = ""
+        if final_state.get("output_mode") == "speechify_export" and script:
+            script_speechify = format_speechify(script)
 
         update_data: dict[str, Any] = {
             "status": "completed",
@@ -247,10 +270,12 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
             "final_script": script,
             "script_elevenlabs_v3": script_el_v3,
             "script_elevenlabs_flash": script_el_flash,
+            "script_speechify": script_speechify,
             "word_count": len(script.split()) if script else 0,
             "target_words": target_words,
             "emotional_intensity": final_state.get("emotional_intensity_score", 0),
             "sensory_density": final_state.get("sensory_density_score", 0),
+            "narratability": final_state.get("narratability_score", 0),
             "source_count": len(final_state.get("sources_log", [])),
             "claim_count": len(final_state.get("claims", [])),
             "errors": final_state.get("errors", []),
@@ -287,8 +312,8 @@ async def run_pipeline(run_id: str, params: dict[str, Any]) -> None:
                 run_id=run_id,
                 node="__complete__",
                 status="completed",
-                node_index=18,
-                total_nodes=18,
+                node_index=len(PIPELINE_NODES),
+                total_nodes=len(PIPELINE_NODES),
                 message="Pipeline complete!",
             )
         )
@@ -389,5 +414,10 @@ def _extract_node_data(node_name: str, output: dict) -> dict[str, Any] | None:
         if qc:
             data["qc_pass"] = qc.overall_pass if hasattr(qc, "overall_pass") else qc.get("overall_pass", False)
             data["word_count"] = qc.word_count if hasattr(qc, "word_count") else qc.get("word_count", 0)
+
+    elif node_name == "script_quality_scores":
+        data["emotional_intensity"] = output.get("emotional_intensity_score", 0)
+        data["sensory_density"] = output.get("sensory_density_score", 0)
+        data["narratability"] = output.get("narratability_score", 0)
 
     return data if data else None
