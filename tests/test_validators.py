@@ -133,6 +133,79 @@ class TestExtractNamedHumans:
         names = extract_named_humans(text)
         assert any("Beethoven" in n for n in names)
 
+    # ── False-positive filtering (places, orgs, operations) ──
+
+    def test_rejects_operations(self):
+        text = "Operation Overlord launched at dawn."
+        assert len(extract_named_humans(text)) == 0
+
+    def test_rejects_geographic_features(self):
+        for phrase in [
+            "The English Channel was rough.",
+            "The Atlantic Wall stretched far.",
+            "Lake Geneva sparkled.",
+            "Cape Town was distant.",
+            "The Baltic Sea froze over.",
+            "The Suez Canal remained open.",
+        ]:
+            names = extract_named_humans(phrase)
+            assert len(names) == 0, f"False positive in: {phrase!r} → {names}"
+
+    def test_rejects_organisations(self):
+        for phrase in [
+            "Royal Air Force bombers flew.",
+            "Central Intelligence Agency files confirm.",
+            "The Secret Intelligence Service sent messages.",
+            "Special Operations Executive agents parachuted.",
+            "Foreign Office cables reveal the panic.",
+        ]:
+            names = extract_named_humans(phrase)
+            assert len(names) == 0, f"False positive in: {phrase!r} → {names}"
+
+    def test_rejects_places_cities(self):
+        for phrase in [
+            "Buenos Aires remained neutral.",
+            "Los Alamos scientists worked.",
+            "San Francisco hosted the conference.",
+            "New York buzzed with rumors.",
+            "Camp David hosted the briefing.",
+        ]:
+            names = extract_named_humans(phrase)
+            assert len(names) == 0, f"False positive in: {phrase!r} → {names}"
+
+    def test_rejects_military_units(self):
+        for phrase in [
+            "Army Group South retreated.",
+            "High Command refused to act.",
+            "Bomber Command flew over Dresden.",
+        ]:
+            names = extract_named_humans(phrase)
+            assert len(names) == 0, f"False positive in: {phrase!r} → {names}"
+
+    def test_rejects_plans_and_events(self):
+        for phrase in [
+            "The Marshall Plan rebuilt Europe.",
+            "The Maginot Line proved useless.",
+            "The Siegfried Line held briefly.",
+        ]:
+            names = extract_named_humans(phrase)
+            assert len(names) == 0, f"False positive in: {phrase!r} → {names}"
+
+    def test_preserves_real_names_among_noise(self):
+        text = (
+            "Operation Overlord began. Winston Churchill approved. "
+            "The Atlantic Wall stretched. Erwin Rommel inspected. "
+            "Royal Air Force bombers flew. Juan Pujol Garcia deceived."
+        )
+        names = extract_named_humans(text)
+        assert "Winston Churchill" in names
+        assert "Erwin Rommel" in names
+        assert "Juan Pujol Garcia" in names
+        # Should NOT contain non-humans
+        assert not any("Overlord" in n for n in names)
+        assert not any("Atlantic" in n for n in names)
+        assert not any("Air Force" in n for n in names)
+
 
 class TestBuildEntityAllowlist:
     def test_from_claims_and_beats(self):

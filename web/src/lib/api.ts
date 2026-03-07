@@ -23,6 +23,7 @@ export interface GenerateParams {
   geo_scope?: string;
   geo_anchor?: string;
   mobility_mode?: string;
+  output_mode?: string;
 }
 
 export interface RunSummary {
@@ -42,6 +43,7 @@ export interface RunSummary {
   target_words?: number;
   emotional_intensity?: number;
   sensory_density?: number;
+  narratability?: number;
   source_count?: number;
   claim_count?: number;
   qc_pass?: boolean;
@@ -52,6 +54,7 @@ export interface RunDetail extends RunSummary {
   final_script?: string;
   script_elevenlabs_v3?: string;
   script_elevenlabs_flash?: string;
+  script_speechify?: string;
   sources_log: Record<string, unknown>[];
   claims: Record<string, unknown>[];
   qc_report?: Record<string, unknown>;
@@ -189,4 +192,8 @@ export function getExportElevenlabsV3Url(runId: string): string {
 
 export function getExportElevenlabsFlashUrl(runId: string): string {
   return `${API_URL}/runs/${runId}/export/elevenlabs-flash`;
+}
+
+export function getExportSpeechifyUrl(runId: string): string {
+  return `${API_URL}/runs/${runId}/export/speechify`;
 }

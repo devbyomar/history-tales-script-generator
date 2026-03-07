@@ -16,6 +16,8 @@ from typing import Any, Optional
 from history_tales_agent.config import (
     WORDS_PER_MINUTE,
     WORD_TOLERANCE,
+    SPEECHIFY_WORDS_PER_MINUTE,
+    SPEECHIFY_WORD_TOLERANCE,
     get_config,
 )
 from history_tales_agent.graph import compile_graph
@@ -41,6 +43,7 @@ def run_agent(
     geo_anchor: Optional[str] = None,
     mobility_mode: Optional[str] = None,
     output_dir: str = "output",
+    output_mode: str = "standard",
 ) -> dict[str, Any]:
     """Run the full documentary script generation pipeline.
 
@@ -60,6 +63,7 @@ def run_agent(
         geo_anchor: Optional physical focal point for spatial cohesion.
         mobility_mode: Optional spatial narrative mode.
         output_dir: Directory for output files.
+        output_mode: Output mode — "standard" or "speechify_export".
 
     Returns:
         Dict containing all pipeline state including final_script, qc_report, etc.
@@ -82,10 +86,17 @@ def run_agent(
         mobility_mode=mobility_mode,
     )
 
-    # Compute word targets
-    target_words = video_length_minutes * WORDS_PER_MINUTE
-    min_words = int(target_words * (1 - WORD_TOLERANCE))
-    max_words = int(target_words * (1 + WORD_TOLERANCE))
+    # Compute word targets — Speechify reads at 115 WPM vs 155 WPM standard
+    if output_mode == "speechify_export":
+        wpm = SPEECHIFY_WORDS_PER_MINUTE
+        tolerance = SPEECHIFY_WORD_TOLERANCE
+    else:
+        wpm = WORDS_PER_MINUTE
+        tolerance = WORD_TOLERANCE
+
+    target_words = video_length_minutes * wpm
+    min_words = int(target_words * (1 - tolerance))
+    max_words = int(target_words * (1 + tolerance))
 
     # Determine re-hook interval
     if video_length_minutes <= 12:
@@ -109,10 +120,12 @@ def run_agent(
         "geo_scope": geo_scope,
         "geo_anchor": geo_anchor,
         "mobility_mode": mobility_mode,
+        "output_mode": output_mode,
         "target_words": target_words,
         "min_words": min_words,
         "max_words": max_words,
         "rehook_interval": rehook_interval,
+        "words_per_minute": wpm,
         "topic_candidates": [],
         "chosen_topic": None,
         "research_corpus": [],
@@ -129,6 +142,7 @@ def run_agent(
         "format_tag": "",
         "emotional_intensity_score": 0.0,
         "sensory_density_score": 0.0,
+        "narratability_score": 0.0,
         "validation_issues": [],
         "current_node": "",
         "errors": [],
@@ -234,6 +248,13 @@ Examples:
         default="output",
         help="Output directory (default: output/)",
     )
+    parser.add_argument(
+        "--output-mode",
+        type=str,
+        default="standard",
+        choices=["standard", "speechify_export"],
+        help="Output mode — 'standard' (155 WPM) or 'speechify_export' (115 WPM, plain narration)",
+    )
 
     # ── Narrative lens / geo / mobility (optional expansions) ──
     parser.add_argument(
@@ -295,6 +316,7 @@ Examples:
             geo_anchor=args.geo_anchor,
             mobility_mode=args.mobility,
             output_dir=args.output_dir,
+            output_mode=args.output_mode,
         )
 
         # Print summary
@@ -330,6 +352,8 @@ Examples:
             print(f"📍 Geo anchor: {args.geo_anchor}")
         if args.mobility:
             print(f"🚗 Mobility: {args.mobility}")
+        if args.output_mode != "standard":
+            print(f"🔊 Output mode: {args.output_mode}")
         print("=" * 70)
 
     except KeyboardInterrupt:

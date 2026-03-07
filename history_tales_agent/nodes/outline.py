@@ -17,6 +17,7 @@ from history_tales_agent.state import (
     Claim,
 )
 from history_tales_agent.utils.llm import call_llm_json
+from history_tales_agent.utils.coerce import coerce_to_str_list
 from history_tales_agent.utils.feedback_memory import load_lessons_prompt
 from history_tales_agent.utils.logging import get_logger
 
@@ -115,10 +116,13 @@ def outline_node(state: dict[str, Any]) -> dict[str, Any]:
             description=rs.get("description", ""),
             target_word_count=rs.get("target_word_count", 0),
             minute_range=rs.get("minute_range", ""),
-            re_hooks=rs.get("re_hooks", []),
-            open_loops=rs.get("open_loops", []),
-            key_beats=rs.get("key_beats", []),
+            re_hooks=coerce_to_str_list(rs.get("re_hooks", [])),
+            open_loops=coerce_to_str_list(rs.get("open_loops", [])),
+            key_beats=coerce_to_str_list(rs.get("key_beats", [])),
             rehook_plan=rehook_plan,
+            midpoint_shift=rs.get("midpoint_shift", ""),
+            late_pressure=rs.get("late_pressure", ""),
+            final_thesis=rs.get("final_thesis", ""),
         )
         sections.append(section)
 

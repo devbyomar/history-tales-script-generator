@@ -39,7 +39,8 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
 
     current_word_count = len(script.split())
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
-    rehook_words = int(avg_rehook * (155 / 60))
+    wpm = state.get("words_per_minute", 155)
+    rehook_words = int(avg_rehook * (wpm / 60))
 
     user_prompt = RETENTION_PASS_USER.format(
         rehook_interval=f"{rehook_interval[0]}–{rehook_interval[1]}",
@@ -95,6 +96,33 @@ def retention_pass_node(state: dict[str, Any]) -> dict[str, Any]:
             output_wc=word_count,
             min_words=min_words,
             msg="Retention pass went below min_words — using original script",
+        )
+        revised_script = script
+        word_count = input_word_count
+
+    # Guard: bounded reduction — retention pass must not cut >15% (Change 25)
+    if input_word_count > 0:
+        reduction_pct = (1 - word_count / input_word_count) * 100
+        if reduction_pct > 15:
+            logger.warning(
+                "retention_pass_overcut",
+                input_wc=input_word_count,
+                output_wc=word_count,
+                reduction_pct=round(reduction_pct, 1),
+                msg="Retention pass cut too much (>15%) — using original script",
+            )
+            revised_script = script
+            word_count = input_word_count
+
+    # Guard: paragraph count — retention pass must not destroy structure
+    input_paragraphs = len([p for p in script.split("\n\n") if p.strip()])
+    output_paragraphs = len([p for p in revised_script.split("\n\n") if p.strip()])
+    if input_paragraphs > 0 and output_paragraphs < input_paragraphs * 0.7:
+        logger.warning(
+            "retention_pass_paragraph_loss",
+            input_paras=input_paragraphs,
+            output_paras=output_paragraphs,
+            msg="Retention pass lost too many paragraphs (>30%) — using original script",
         )
         revised_script = script
         word_count = input_word_count

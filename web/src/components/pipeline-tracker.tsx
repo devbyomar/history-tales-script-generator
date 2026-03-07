@@ -20,7 +20,6 @@ import {
   PenTool,
   Shield,
   Brain,
-  Eye,
   FileCheck,
   Flag,
   StopCircle,
@@ -29,10 +28,8 @@ import type { NodeProgress } from "@/lib/api";
 
 const NODE_ICONS: Record<string, React.ReactNode> = {
   topic_discovery: <Search className="h-4 w-4" />,
-  format_rotation_guard: <Shield className="h-4 w-4" />,
   topic_scoring: <Zap className="h-4 w-4" />,
   research_fetch: <BookOpen className="h-4 w-4" />,
-  source_credibility: <Shield className="h-4 w-4" />,
   claims_extraction: <BookOpen className="h-4 w-4" />,
   cross_check: <FileCheck className="h-4 w-4" />,
   timeline_builder: <BookOpen className="h-4 w-4" />,
@@ -42,18 +39,15 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   script_generation: <PenTool className="h-4 w-4" />,
   fact_tighten: <FileCheck className="h-4 w-4" />,
   retention_pass: <Zap className="h-4 w-4" />,
-  emotional_intensity: <Brain className="h-4 w-4" />,
-  sensory_density: <Eye className="h-4 w-4" />,
+  script_quality_scores: <Brain className="h-4 w-4" />,
   quality_check: <FileCheck className="h-4 w-4" />,
   finalize: <Flag className="h-4 w-4" />,
 };
 
 const NODE_TIERS: Record<string, "fast" | "creative" | "none"> = {
   topic_discovery: "fast",
-  format_rotation_guard: "none",
   topic_scoring: "fast",
   research_fetch: "none",
-  source_credibility: "none",
   claims_extraction: "fast",
   cross_check: "fast",
   timeline_builder: "fast",
@@ -63,18 +57,15 @@ const NODE_TIERS: Record<string, "fast" | "creative" | "none"> = {
   script_generation: "fast",
   fact_tighten: "fast",
   retention_pass: "fast",
-  emotional_intensity: "fast",
-  sensory_density: "fast",
+  script_quality_scores: "fast",
   quality_check: "fast",
   finalize: "none",
 };
 
 const ALL_NODES = [
   "topic_discovery",
-  "format_rotation_guard",
   "topic_scoring",
   "research_fetch",
-  "source_credibility",
   "claims_extraction",
   "cross_check",
   "timeline_builder",
@@ -84,8 +75,7 @@ const ALL_NODES = [
   "script_generation",
   "fact_tighten",
   "retention_pass",
-  "emotional_intensity",
-  "sensory_density",
+  "script_quality_scores",
   "quality_check",
   "finalize",
 ];

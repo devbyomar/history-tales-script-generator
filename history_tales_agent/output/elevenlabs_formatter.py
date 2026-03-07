@@ -75,7 +75,7 @@ _ONSCREEN_RE = re.compile(
 
 # Disclaimer at the very end
 _DISCLAIMER_RE = re.compile(
-    r"^This documentary script is a historical synthesis.*$", re.MULTILINE
+    r"^This (?:documentary )?script is a historical synthesis.*$", re.MULTILINE
 )
 
 # CTA section (whole block from "--- [CTA] ---" to end)

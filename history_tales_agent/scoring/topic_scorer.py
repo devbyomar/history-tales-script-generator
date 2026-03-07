@@ -61,6 +61,33 @@ def score_topic(
             f"Sensitivity fit too low ({sensitivity_score}/10) for {sensitivity_level}"
         )
 
+    # --- Evidence-support penalty (Change 5) ---
+    # Micro-incident formats (Countdown, One Room) imply tight documentation.
+    # If evidence is weak, penalise these formats because the script will
+    # end up fabricating specificity the sources don't support.
+    micro_incident_formats = {"Countdown", "One Room", "Impossible Choice"}
+    format_tag = candidate.format_tag or ""
+    if format_tag in micro_incident_formats and evidence_score < 8:
+        # Penalty scales: evidence 7→2%, evidence 5→8%, evidence 3→14%
+        penalty = max(0.02, (8 - evidence_score) * 0.02)
+        normalised_score *= (1 - penalty)
+        if evidence_score < 6:
+            rejection_reasons.append(
+                f"Format '{format_tag}' requires strong documented evidence "
+                f"but evidence_availability is only {evidence_score}/10. "
+                f"Consider a broader format like 'Chain Reaction' or 'Two Truths'."
+            )
+
+    # --- Human-POV penalty for micro-incident without strong POV ---
+    human_pov = raw_scores.get("human_pov_availability", 5.0)
+    if format_tag in micro_incident_formats and human_pov < 7:
+        normalised_score *= 0.95  # 5% penalty
+        if human_pov < 5:
+            rejection_reasons.append(
+                f"Format '{format_tag}' requires a well-documented named individual "
+                f"but human_pov_availability is only {human_pov}/10."
+            )
+
     # --- Runtime fit multiplier ---
     # Simulate real-time fit assessment (0.85–1.15)
     runtime_multiplier = round(random.uniform(0.92, 1.08), 3)

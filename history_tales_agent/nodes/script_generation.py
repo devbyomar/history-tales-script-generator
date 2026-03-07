@@ -1,4 +1,4 @@
-"""ScriptGenerationNode — Stage A: writes the draft documentary script.
+"""ScriptGenerationNode — Stage A: writes the draft history script.
 
 Stage B (FactTightenNode) follows to add trace tags and tighten facts.
 """
@@ -26,14 +26,13 @@ from history_tales_agent.state import (
 )
 from history_tales_agent.utils.llm import call_llm
 from history_tales_agent.utils.feedback_memory import load_lessons_prompt
-from history_tales_agent.utils.reference_library import find_best_reference, build_reference_prompt
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate the complete documentary script."""
+    """Generate the complete history script."""
     logger.info("node_start", node="ScriptGenerationNode")
 
     chosen: TopicCandidate | None = state.get("chosen_topic")
@@ -60,12 +59,16 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
 
     tone_instructions = get_tone_instructions(tone)
     avg_rehook = (rehook_interval[0] + rehook_interval[1]) // 2
-    rehook_words = int(avg_rehook * (155 / 60))  # Words per rehook interval
+    wpm = state.get("words_per_minute", 155)
+    rehook_words = int(avg_rehook * (wpm / 60))  # Words per rehook interval
 
     outline_json = json.dumps(
         [{"section": s.section_name, "description": s.description,
           "target_words": s.target_word_count, "re_hooks": s.re_hooks,
-          "key_beats": s.key_beats}
+          "key_beats": s.key_beats,
+          "midpoint_shift": s.midpoint_shift,
+          "late_pressure": s.late_pressure,
+          "final_thesis": s.final_thesis}
          for s in outline], indent=2,
     )
 
@@ -148,24 +151,6 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
         user_prompt = guardrail_feedback + "\n\n" + user_prompt
         logger.info("guardrail_feedback_injected", issues=len(validation_issues))
 
-    # ── Inject best-matching reference transcript as style exemplar ──
-    if iteration_count == 0:  # only on the first attempt — retries focus on QC fixes
-        ref = find_best_reference(
-            duration_minutes=video_length,
-            tone=tone,
-            format_tag=format_tag,
-            era=chosen.era if chosen else None,
-            geo=chosen.geo if chosen else None,
-        )
-        if ref:
-            ref_prompt = build_reference_prompt(ref, target_duration_minutes=video_length)
-            user_prompt = ref_prompt + "\n\n" + user_prompt
-            logger.info(
-                "reference_injected",
-                node="ScriptGenerationNode",
-                title=ref.get("title", "?"),
-            )
-
     # ── On retry: inject QC feedback so the LLM knows what to fix ──
     if iteration_count > 0 and qc_report and qc_report.issues:
         qc_feedback = (
@@ -218,22 +203,22 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             attempt=attempt,
         )
         expand_system = (
-            "You are an expert history documentary scriptwriter performing a "
+            "You are an expert long-form YouTube history storyteller performing a "
             "SURGICAL expansion. You will add exactly the number of words "
-            "requested, spread proportionally across every section of the "
-            "script. Do NOT rewrite existing sentences — INSERT new ones "
+            "requested, spread proportionally across the entire script. "
+            "Do NOT rewrite existing sentences — INSERT new ones "
             "between them.\n\n"
             "RULES:\n"
             "1. Keep every existing sentence UNCHANGED — do not rephrase, "
             "merge, or delete anything.\n"
-            "2. Keep every section marker (--- [SECTION] ---) intact.\n"
-            "3. Spread new material EVENLY across all sections — do not dump "
-            "all additions into one act.\n"
-            "4. Each new sentence must contain a concrete historical detail, "
+            "2. Spread new material EVENLY across the script — do not dump "
+            "all additions into one stretch.\n"
+            "3. Each new sentence must contain a concrete historical detail, "
             "a REAL person's name, or a functional sensory cue.\n"
-            "5. Do NOT invent fictional characters. Every named person must "
+            "4. Do NOT invent fictional characters. Every named person must "
             "be historically documented.\n"
-            "6. Do NOT add filler, hedging, or meta-commentary.\n"
+            "5. Do NOT add filler, hedging, or meta-commentary.\n"
+            "6. Output PURE SPOKEN TEXT — no section headers, no labels, no markers.\n"
             "7. Count your output carefully. Your FINAL word count must land "
             f"between {min_words} and {max_words}."
         )
@@ -243,7 +228,7 @@ def script_generation_node(state: dict[str, Any]) -> dict[str, Any]:
             f"ALLOWED range: {min_words}–{max_words}\n"
             f"WORDS TO ADD: approximately {words_needed}\n\n"
             f"Spread ~{words_needed} new words across the script below. "
-            f"Add 2–4 new sentences per section, each with a concrete "
+            f"Add 2–4 new sentences throughout, each with a concrete "
             f"historical detail. Do NOT remove or change existing text.\n\n"
             f"Output ONLY the complete expanded script.\n\n"
             f"{script}"

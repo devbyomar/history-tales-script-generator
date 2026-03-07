@@ -1,4 +1,7 @@
-"""ClaimsExtractionNode — extracts verifiable claims from research corpus."""
+"""ClaimsExtractionNode — extracts verifiable claims from research corpus.
+
+Uses batched LLM extraction — all source texts sent in a single call.
+"""
 
 from __future__ import annotations
 
@@ -11,13 +14,14 @@ from history_tales_agent.prompts.templates import (
 )
 from history_tales_agent.state import Claim, TopicCandidate
 from history_tales_agent.utils.llm import call_llm_json
+from history_tales_agent.utils.coerce import coerce_to_str_list
 from history_tales_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def claims_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Extract factual claims from the research corpus."""
+    """Extract factual claims from the research corpus in a single batched call."""
     logger.info("node_start", node="ClaimsExtractionNode")
 
     chosen: TopicCandidate | None = state.get("chosen_topic")
@@ -29,51 +33,73 @@ def claims_extraction_node(state: dict[str, Any]) -> dict[str, Any]:
             "current_node": "ClaimsExtractionNode",
         }
 
-    all_claims: list[Claim] = []
-
-    # Cap at 5 best sources to avoid excessive LLM calls
+    # Cap at 5 best sources to keep context window manageable
     filtered_corpus = [item for item in corpus if item.get("text", "") and len(item.get("text", "")) >= 100]
     filtered_corpus = filtered_corpus[:5]
 
     logger.info("claims_extraction_sources", total_corpus=len(corpus), using=len(filtered_corpus))
 
-    # Global claim counter for sequential IDs
-    claim_counter = 1
+    if not filtered_corpus:
+        return {
+            "errors": state.get("errors", []) + ["ClaimsExtractionNode: No usable corpus items"],
+            "current_node": "ClaimsExtractionNode",
+        }
 
-    for item in filtered_corpus:
-        text = item.get("text", "")
+    # ── Build batched sources block ───────────────────────────────────
+    source_blocks: list[str] = []
+    for i, item in enumerate(filtered_corpus, 1):
+        block = (
+            f"--- Source {i}: {item.get('source', 'Unknown')} ({item.get('url', '')}) ---\n"
+            f"{item.get('text', '')[:6000]}"
+        )
+        source_blocks.append(block)
 
-        try:
-            # Pass the starting claim ID so IDs are globally unique
-            claim_id_start = f"C{claim_counter:03d}"
-            user_prompt = CLAIMS_EXTRACTION_USER.format(
-                topic_title=chosen.title,
-                research_text=text[:6000],
-                source_name=item.get("source", "Unknown"),
-                source_url=item.get("url", ""),
-                claim_id_start=claim_id_start,
+    sources_block = "\n\n".join(source_blocks)
+
+    user_prompt = CLAIMS_EXTRACTION_USER.format(
+        topic_title=chosen.title,
+        sources_block=sources_block,
+    )
+
+    # ── Single batched LLM call ───────────────────────────────────────
+    all_claims: list[Claim] = []
+    try:
+        raw_claims = call_llm_json(CLAIMS_EXTRACTION_SYSTEM, user_prompt, tier="fast")
+
+        # Build a quick lookup for source info fallback
+        source_lookup: dict[str, dict[str, str]] = {}
+        for item in filtered_corpus:
+            name = item.get("source", "Unknown")
+            source_lookup[name] = {
+                "source": name,
+                "url": item.get("url", ""),
+            }
+
+        for rc in raw_claims:
+            # Try to match source from claim's source_name field
+            src_name = rc.get("source_name", "Unknown")
+            src_info = source_lookup.get(src_name, {"source": src_name, "url": rc.get("source_url", "")})
+
+            claim = Claim(
+                claim_id=rc.get("claim_id", f"C{len(all_claims)+1:03d}"),
+                claim_text=rc.get("claim_text", ""),
+                source_name=src_info["source"],
+                source_url=rc.get("source_url", src_info.get("url", "")),
+                source_type=rc.get("source_type", "Secondary"),
+                confidence=rc.get("confidence", "Moderate"),
+                cross_checked=False,
+                date_anchor=rc.get("date_anchor", ""),
+                named_entities=coerce_to_str_list(rc.get("named_entities", [])),
+                quote_candidate=rc.get("quote_candidate", False),
             )
+            all_claims.append(claim)
 
-            raw_claims = call_llm_json(CLAIMS_EXTRACTION_SYSTEM, user_prompt, tier="fast")
-
-            for rc in raw_claims:
-                claim = Claim(
-                    claim_id=rc.get("claim_id", f"C{claim_counter:03d}"),
-                    claim_text=rc.get("claim_text", ""),
-                    source_name=item.get("source", "Unknown"),
-                    source_url=item.get("url", ""),
-                    source_type=rc.get("source_type", "Secondary"),
-                    confidence=rc.get("confidence", "Moderate"),
-                    cross_checked=False,
-                    date_anchor=rc.get("date_anchor", ""),
-                    named_entities=rc.get("named_entities", []),
-                    quote_candidate=rc.get("quote_candidate", False),
-                )
-                all_claims.append(claim)
-                claim_counter += 1
-
-        except Exception as e:
-            logger.warning("claims_extraction_error", source=item.get("title"), error=str(e))
+    except Exception as e:
+        logger.error("batch_claims_extraction_failed", error=str(e))
+        return {
+            "errors": state.get("errors", []) + [f"ClaimsExtractionNode: {str(e)}"],
+            "current_node": "ClaimsExtractionNode",
+        }
 
     # Cap total claims to avoid bloating downstream nodes
     if len(all_claims) > 50:
