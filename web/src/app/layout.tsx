@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "History Tales — AI Documentary Script Generator",
   description:
     "Generate high-retention, emotionally resonant, evidence-led history documentary scripts with AI.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
