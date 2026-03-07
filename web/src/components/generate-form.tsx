@@ -90,6 +90,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
   const [geoAnchor, setGeoAnchor] = useState("");
   const [mobilityMode, setMobilityMode] = useState("");
   const [outputMode, setOutputMode] = useState("standard");
+  const [skipTopicExploration, setSkipTopicExploration] = useState(false);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -109,6 +110,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
         geo_anchor: geoAnchor || undefined,
         mobility_mode: mobilityMode || undefined,
         output_mode: outputMode,
+        skip_topic_exploration: topicSeed && skipTopicExploration ? true : undefined,
       });
     },
     [
@@ -126,6 +128,7 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
       geoAnchor,
       mobilityMode,
       outputMode,
+      skipTopicExploration,
       onSubmit,
     ]
   );
@@ -204,6 +207,25 @@ export function GenerateForm({ onSubmit, isLoading }: GenerateFormProps) {
               onChange={(e) => setTopicSeed(e.target.value)}
             />
           </div>
+
+          {/* Skip Topic Exploration – only visible when a topic seed is set */}
+          {topicSeed && (
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="skipTopicExploration"
+                checked={skipTopicExploration}
+                onChange={(e) => setSkipTopicExploration(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="skipTopicExploration" className="text-sm">
+                Skip topic exploration{" "}
+                <span className="text-muted-foreground font-normal">
+                  (use seed directly — no discovery & scoring)
+                </span>
+              </Label>
+            </div>
+          )}
 
           {/* Tone & Sensitivity */}
           <div className="grid grid-cols-2 gap-3">
