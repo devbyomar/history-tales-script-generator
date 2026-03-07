@@ -1,4 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <text y="80" font-size="80">🎬</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffb347"/>
+      <stop offset="100%" stop-color="#ff8c00"/>
+    </linearGradient>
+    <linearGradient id="scroll" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5e6d0"/>
+      <stop offset="100%" stop-color="#e8d5b7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Film strip left -->
+  <rect x="56" y="100" width="48" height="312" rx="6" fill="#2a2a4a"/>
+  <rect x="64" y="116" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="152" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="188" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="224" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="260" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="296" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="332" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="64" y="368" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="116" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="152" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="188" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="224" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="260" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="296" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="332" width="14" height="20" rx="3" fill="#3a3a5c"/>
+  <rect x="82" y="368" width="14" height="20" rx="3" fill="#3a3a5c"/>
+
+  <!-- Scroll / parchment body -->
+  <rect x="128" y="120" width="280" height="296" rx="12" fill="url(#scroll)" opacity="0.95"/>
+
+  <!-- Scroll top curl -->
+  <ellipse cx="268" cy="120" rx="152" ry="22" fill="#e8d5b7"/>
+  <ellipse cx="268" cy="120" rx="140" ry="16" fill="#f5e6d0"/>
+
+  <!-- Scroll bottom curl -->
+  <ellipse cx="268" cy="416" rx="152" ry="22" fill="#d4c4a0"/>
+  <ellipse cx="268" cy="416" rx="140" ry="16" fill="#e8d5b7"/>
+
+  <!-- Script text lines on scroll -->
+  <rect x="164" y="168" width="200" height="6" rx="3" fill="#b8a080" opacity="0.6"/>
+  <rect x="164" y="196" width="168" height="6" rx="3" fill="#b8a080" opacity="0.5"/>
+  <rect x="164" y="224" width="188" height="6" rx="3" fill="#b8a080" opacity="0.6"/>
+  <rect x="164" y="252" width="152" height="6" rx="3" fill="#b8a080" opacity="0.4"/>
+  <rect x="164" y="280" width="200" height="6" rx="3" fill="#b8a080" opacity="0.5"/>
+  <rect x="164" y="308" width="176" height="6" rx="3" fill="#b8a080" opacity="0.6"/>
+  <rect x="164" y="336" width="140" height="6" rx="3" fill="#b8a080" opacity="0.4"/>
+  <rect x="164" y="364" width="192" height="6" rx="3" fill="#b8a080" opacity="0.5"/>
+
+  <!-- Quill pen -->
+  <g transform="translate(340, 80) rotate(35)">
+    <!-- Feather -->
+    <path d="M0,0 C-20,40 -16,100 -6,160 L0,164 L6,160 C16,100 20,40 0,0Z" fill="url(#amber)" opacity="0.9"/>
+    <!-- Feather spine -->
+    <line x1="0" y1="0" x2="0" y2="164" stroke="#cc7000" stroke-width="2"/>
+    <!-- Quill tip -->
+    <path d="M-2,164 L0,184 L2,164Z" fill="#4a3520"/>
+    <!-- Feather barbs left -->
+    <line x1="0" y1="30" x2="-14" y2="20" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="55" x2="-16" y2="42" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="80" x2="-15" y2="68" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="105" x2="-13" y2="94" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <!-- Feather barbs right -->
+    <line x1="0" y1="30" x2="14" y2="20" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="55" x2="16" y2="42" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="80" x2="15" y2="68" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="105" x2="13" y2="94" stroke="#e8960a" stroke-width="1" opacity="0.5"/>
+  </g>
+
+  <!-- "HT" monogram -->
+  <text x="256" y="480" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="bold" fill="url(#amber)" letter-spacing="6" opacity="0.85">HT</text>
 </svg>
