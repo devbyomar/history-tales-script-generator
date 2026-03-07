@@ -234,6 +234,7 @@ class GraphState(TypedDict, total=False):
     nonlinear_open: bool
     previous_format_tag: Optional[str]
     requested_format_tag: Optional[str]
+    output_mode: str
 
     # Narrative lens / geo / mobility (optional expansions)
     narrative_lens: Optional[str | list[str]]
